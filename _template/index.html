@@ -175,6 +175,9 @@ mv.addEventListener('progress', e => {
 
 // hide AR button where AR is unavailable (desktop)
 mv.addEventListener('load', () => {
+  // the poster does not always self-dismiss; drop it once the model is ready
+  // or the client ends up looking at a static image instead of the live 3D
+  mv.dismissPoster();
   if (!mv.canActivateAR) document.getElementById('ar-btn').style.display = 'none';
 });
 </script>
