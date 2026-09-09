@@ -1,0 +1,13 @@
+Drop 5 .hdr files here, named exactly:
+
+  studio.hdr
+  showroom.hdr
+  daylight.hdr
+  sunset.hdr
+  night.hdr
+
+Use 1k resolution (~1-2 MB each). 4k/8k HDRIs are 20-100 MB and will
+make the page unusable on mobile data.
+
+All six model folders share these files, so you only upload them once.
+To rename an environment, edit the ENVIRONMENTS block in each index.html.

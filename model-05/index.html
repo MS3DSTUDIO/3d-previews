@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Model Preview</title>
+
+<!-- PINNED VERSION - do not change to @latest, or this link breaks on a future release.
+     Confirm the current stable version at modelviewer.dev and bump deliberately. -->
+<script type="module"
+  src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+
+<style>
+  :root{
+    --bg:#0f1115; --panel:rgba(22,25,32,.82); --line:rgba(255,255,255,.14);
+    --fg:#f2f4f8; --muted:#9aa3b2; --accent:#c9a227;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg); color:var(--fg);
+    font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    display:flex; flex-direction:column; overscroll-behavior:none;
+  }
+  header{
+    padding:14px 18px calc(14px + env(safe-area-inset-top)); flex:0 0 auto;
+    border-bottom:1px solid var(--line);
+  }
+  header h1{margin:0;font-size:15px;font-weight:600;letter-spacing:.02em}
+  header p{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+
+  model-viewer{
+    position:absolute; inset:0; width:100%; height:100%;
+    background:#0f1115; --poster-color:transparent;
+  }
+
+  /* --- HDRI switcher --- */
+  .env-bar{
+    flex:0 0 auto; display:flex; gap:8px; align-items:center;
+    padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+    background:var(--panel); border-top:1px solid var(--line);
+    overflow-x:auto; -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .env-bar::-webkit-scrollbar{display:none}
+  .env-bar button{
+    flex:0 0 auto; cursor:pointer; white-space:nowrap;
+    padding:9px 14px; border-radius:999px;
+    background:transparent; color:var(--muted);
+    border:1px solid var(--line); font:inherit; font-size:13px;
+    transition:.15s;
+  }
+  .env-bar button:hover{color:var(--fg)}
+  .env-bar button[aria-pressed="true"]{
+    background:var(--accent); border-color:var(--accent); color:#141414; font-weight:600;
+  }
+  .spacer{flex:1 1 auto; min-width:8px}
+  .toggle{
+    flex:0 0 auto; display:flex; align-items:center; gap:7px;
+    font-size:12.5px; color:var(--muted); cursor:pointer; user-select:none;
+  }
+  .toggle input{accent-color:var(--accent); width:15px; height:15px}
+
+  /* --- AR button --- */
+  #ar-btn{
+    position:absolute; right:14px; bottom:14px;
+    padding:11px 18px; border-radius:999px; border:none; cursor:pointer;
+    background:#fff; color:#111; font:inherit; font-size:13.5px; font-weight:600;
+    box-shadow:0 4px 18px rgba(0,0,0,.4);
+  }
+  .viewport{position:relative; flex:1 1 auto; display:flex; min-height:0}
+
+  /* --- loading bar --- */
+  .bar{position:absolute; top:0; left:0; right:0; height:2px; background:transparent}
+  .bar>i{display:block; height:100%; width:0; background:var(--accent); transition:width .2s}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="../" style="color:var(--muted);text-decoration:none;font-size:12.5px">&larr; All models</a>
+  <h1 id="title">Model Preview</h1>
+  <p>Drag to orbit &middot; pinch or scroll to zoom &middot; tap <b>View in AR</b> on mobile</p>
+</header>
+
+<div class="viewport">
+  <div class="bar"><i id="progress"></i></div>
+  <model-viewer id="mv"
+    src="model.glb"
+    poster="poster.webp"
+    alt="3D model preview"
+    camera-controls
+    touch-action="pan-y"
+    interaction-prompt="auto"
+    shadow-intensity="1"
+    shadow-softness="0.75"
+    exposure="1"
+    tone-mapping="neutral"
+    environment-image="neutral"
+    ar
+    ar-modes="webxr scene-viewer quick-look"
+    ar-scale="auto">
+    <button id="ar-btn" slot="ar-button">View in AR</button>
+  </model-viewer>
+</div>
+
+<nav class="env-bar" id="envbar" aria-label="Lighting environment"></nav>
+
+<script>
+/* ============================================================
+   CONFIG - edit this block only.
+   Drop your .hdr files into  hdri/  and match the names below.
+   `exposure` lets you balance each HDRI so the model reads the
+   same brightness across all five.
+   ============================================================ */
+const MODEL_TITLE = "Model 05";
+
+const ENVIRONMENTS = [
+  { name:"Studio",   file:"../hdri/studio.hdr",   exposure:1.70 },
+  { name:"Showroom", file:"../hdri/showroom.hdr", exposure:1.35 },
+  { name:"Daylight", file:"../hdri/daylight.hdr", exposure:0.85 },
+  { name:"Sunset",   file:"../hdri/sunset.hdr",   exposure:1.15 },
+  { name:"Night",    file:"../hdri/night.hdr",    exposure:1.40 },
+];
+
+// true  = HDRI also visible as the background
+// false = HDRI lights/reflects only, flat background
+const SHOW_BACKGROUND_DEFAULT = false;
+/* ========================= END CONFIG ====================== */
+
+const mv    = document.getElementById('mv');
+const bar   = document.getElementById('envbar');
+const prog  = document.getElementById('progress');
+document.getElementById('title').textContent = MODEL_TITLE;
+document.title = MODEL_TITLE;
+
+let showBg = SHOW_BACKGROUND_DEFAULT;
+let active = 0;
+
+function apply(i){
+  const env = ENVIRONMENTS[i];
+  active = i;
+  mv.environmentImage = env.file;
+  mv.skyboxImage = showBg ? env.file : null;
+  mv.exposure = env.exposure;
+  [...bar.querySelectorAll('button')].forEach((b, n) =>
+    b.setAttribute('aria-pressed', String(n === i)));
+}
+
+ENVIRONMENTS.forEach((env, i) => {
+  const b = document.createElement('button');
+  b.textContent = env.name;
+  b.setAttribute('aria-pressed', 'false');
+  b.onclick = () => apply(i);
+  bar.appendChild(b);
+});
+
+bar.insertAdjacentHTML('beforeend', '<span class="spacer"></span>');
+const lbl = document.createElement('label');
+lbl.className = 'toggle';
+lbl.innerHTML = '<input type="checkbox" id="bg"> Background';
+bar.appendChild(lbl);
+const bgBox = document.getElementById('bg');
+bgBox.checked = showBg;
+bgBox.onchange = () => { showBg = bgBox.checked; apply(active); };
+
+apply(0);
+
+// loading progress
+mv.addEventListener('progress', e => {
+  const p = e.detail.totalProgress;
+  prog.style.width = (p * 100) + '%';
+  if (p === 1) setTimeout(() => { prog.style.width = '0'; }, 400);
+});
+
+// hide AR button where AR is unavailable (desktop)
+mv.addEventListener('load', () => {
+  if (!mv.canActivateAR) document.getElementById('ar-btn').style.display = 'none';
+});
+</script>
+</body>
+</html>
