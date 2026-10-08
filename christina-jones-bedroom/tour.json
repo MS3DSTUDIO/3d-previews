@@ -1,10 +1,10 @@
 {
  "project": "Christina Jones \u00b7 Bedroom",
  "default_node": "bedroom",
- "default_floor": "carpet",
+ "default_floor": "main",
  "default_doors": "closed",
  "floors": {
-  "carpet": "Wall-to-wall carpet"
+  "main": "Hardwood with rug"
  },
  "doors": {
   "closed": "Closed"
@@ -14,7 +14,8 @@
   "url": "https://www.maureenstevens.com/"
  },
  "times": [
-  "day"
+  "day",
+  "night"
  ],
  "nodes": [
   {
@@ -62,69 +63,233 @@
    "links": [],
    "appliances": [],
    "panos": {
-    "floor-carpet__doors-closed": {
-     "full": "pano_bedroom_day.jpg",
-     "mobile": "pano_bedroom_day_m.jpg"
+    "floor-main__doors-closed": {
+     "full": "pano_day.jpg",
+     "mobile": "pano_day_m.jpg",
+     "night": {
+      "full": "pano_night.jpg",
+      "mobile": "pano_night_m.jpg"
+     }
     }
    },
    "photos": [
     {
-     "still": "Still_01_BedWall",
-     "label": "The Bedroom",
+     "still": "CAM_01_BedWall",
      "yaw": 0,
-     "pitch": -36
+     "pitch": -38,
+     "label": "The Bedroom"
     },
     {
-     "still": "Still_03_WindowSeat",
-     "label": "Window Seat",
-     "yaw": -88,
-     "pitch": -19
+     "still": "CAM_02_DresserWall",
+     "yaw": -172,
+     "pitch": 6,
+     "label": "Dresser Wall"
     },
     {
-     "still": "Still_04_ClosetDoor",
-     "label": "Closet & Door",
-     "yaw": 58,
-     "pitch": -2
+     "still": "CAM_03_WindowNook",
+     "yaw": -92.6,
+     "pitch": -20,
+     "label": "Window Nook"
     },
     {
-     "still": "Still_02_DresserWall",
-     "label": "Dresser Wall",
-     "yaw": 180,
-     "pitch": -20
+     "still": "CAM_04_DoorCloset",
+     "yaw": 60,
+     "pitch": -2,
+     "label": "Closet & Door"
+    },
+    {
+     "still": "Cam_05",
+     "yaw": 33.7,
+     "pitch": -10,
+     "label": "Bedside Pendant"
+    },
+    {
+     "still": "Cam_06",
+     "yaw": -78,
+     "pitch": 0,
+     "label": "Window Seat"
+    },
+    {
+     "still": "Cam_07",
+     "yaw": -108.5,
+     "pitch": -9,
+     "label": "Window Seat Pillows"
+    },
+    {
+     "still": "Cam_08",
+     "yaw": 171,
+     "pitch": -21,
+     "label": "Dresser Styling"
+    },
+    {
+     "still": "Cam_09",
+     "yaw": 151.7,
+     "pitch": -5,
+     "label": "Thermostat"
     }
    ]
   }
  ],
  "stills": [
   {
-   "id": "Still_01_BedWall",
+   "id": "day_CAM_01_BedWall",
+   "time": "day",
    "caption": "The Bedroom",
-   "src": "still_Still_01_BedWall.jpg",
-   "thumb": "thumb_Still_01_BedWall.jpg",
+   "src": "still_day_CAM_01_BedWall.jpg",
+   "thumb": "thumb_day_CAM_01_BedWall.jpg",
    "w": 1920,
    "h": 1280
   },
   {
-   "id": "Still_02_DresserWall",
+   "id": "day_CAM_02_DresserWall",
+   "time": "day",
    "caption": "Dresser Wall",
-   "src": "still_Still_02_DresserWall.jpg",
-   "thumb": "thumb_Still_02_DresserWall.jpg",
+   "src": "still_day_CAM_02_DresserWall.jpg",
+   "thumb": "thumb_day_CAM_02_DresserWall.jpg",
    "w": 1920,
    "h": 1280
   },
   {
-   "id": "Still_03_WindowSeat",
-   "caption": "Window Seat",
-   "src": "still_Still_03_WindowSeat.jpg",
-   "thumb": "thumb_Still_03_WindowSeat.jpg",
+   "id": "day_CAM_03_WindowNook",
+   "time": "day",
+   "caption": "Window Nook",
+   "src": "still_day_CAM_03_WindowNook.jpg",
+   "thumb": "thumb_day_CAM_03_WindowNook.jpg",
    "w": 1920,
    "h": 1280
   },
   {
-   "id": "Still_04_ClosetDoor",
+   "id": "day_CAM_04_DoorCloset",
+   "time": "day",
    "caption": "Closet & Door",
-   "src": "still_Still_04_ClosetDoor.jpg",
-   "thumb": "thumb_Still_04_ClosetDoor.jpg",
+   "src": "still_day_CAM_04_DoorCloset.jpg",
+   "thumb": "thumb_day_CAM_04_DoorCloset.jpg",
+   "w": 1920,
+   "h": 1280
+  },
+  {
+   "id": "day_Cam_05",
+   "time": "day",
+   "caption": "Bedside Pendant",
+   "src": "still_day_Cam_05.jpg",
+   "thumb": "thumb_day_Cam_05.jpg",
+   "w": 1920,
+   "h": 1280
+  },
+  {
+   "id": "day_Cam_06",
+   "time": "day",
+   "caption": "Window Seat",
+   "src": "still_day_Cam_06.jpg",
+   "thumb": "thumb_day_Cam_06.jpg",
+   "w": 1920,
+   "h": 1280
+  },
+  {
+   "id": "day_Cam_07",
+   "time": "day",
+   "caption": "Window Seat Pillows",
+   "src": "still_day_Cam_07.jpg",
+   "thumb": "thumb_day_Cam_07.jpg",
+   "w": 1920,
+   "h": 1280
+  },
+  {
+   "id": "day_Cam_08",
+   "time": "day",
+   "caption": "Dresser Styling",
+   "src": "still_day_Cam_08.jpg",
+   "thumb": "thumb_day_Cam_08.jpg",
+   "w": 1920,
+   "h": 1280
+  },
+  {
+   "id": "day_Cam_09",
+   "time": "day",
+   "caption": "Thermostat",
+   "src": "still_day_Cam_09.jpg",
+   "thumb": "thumb_day_Cam_09.jpg",
+   "w": 1920,
+   "h": 1280
+  },
+  {
+   "id": "night_CAM_01_BedWall",
+   "time": "night",
+   "caption": "The Bedroom",
+   "src": "still_night_CAM_01_BedWall.jpg",
+   "thumb": "thumb_night_CAM_01_BedWall.jpg",
+   "w": 1920,
+   "h": 1280
+  },
+  {
+   "id": "night_CAM_02_DresserWall",
+   "time": "night",
+   "caption": "Dresser Wall",
+   "src": "still_night_CAM_02_DresserWall.jpg",
+   "thumb": "thumb_night_CAM_02_DresserWall.jpg",
+   "w": 1920,
+   "h": 1280
+  },
+  {
+   "id": "night_CAM_03_WindowNook",
+   "time": "night",
+   "caption": "Window Nook",
+   "src": "still_night_CAM_03_WindowNook.jpg",
+   "thumb": "thumb_night_CAM_03_WindowNook.jpg",
+   "w": 1920,
+   "h": 1280
+  },
+  {
+   "id": "night_CAM_04_DoorCloset",
+   "time": "night",
+   "caption": "Closet & Door",
+   "src": "still_night_CAM_04_DoorCloset.jpg",
+   "thumb": "thumb_night_CAM_04_DoorCloset.jpg",
+   "w": 1920,
+   "h": 1280
+  },
+  {
+   "id": "night_Cam_05",
+   "time": "night",
+   "caption": "Bedside Pendant",
+   "src": "still_night_Cam_05.jpg",
+   "thumb": "thumb_night_Cam_05.jpg",
+   "w": 1920,
+   "h": 1280
+  },
+  {
+   "id": "night_Cam_06",
+   "time": "night",
+   "caption": "Window Seat",
+   "src": "still_night_Cam_06.jpg",
+   "thumb": "thumb_night_Cam_06.jpg",
+   "w": 1920,
+   "h": 1280
+  },
+  {
+   "id": "night_Cam_07",
+   "time": "night",
+   "caption": "Window Seat Pillows",
+   "src": "still_night_Cam_07.jpg",
+   "thumb": "thumb_night_Cam_07.jpg",
+   "w": 1920,
+   "h": 1280
+  },
+  {
+   "id": "night_Cam_08",
+   "time": "night",
+   "caption": "Dresser Styling",
+   "src": "still_night_Cam_08.jpg",
+   "thumb": "thumb_night_Cam_08.jpg",
+   "w": 1920,
+   "h": 1280
+  },
+  {
+   "id": "night_Cam_09",
+   "time": "night",
+   "caption": "Thermostat",
+   "src": "still_night_Cam_09.jpg",
+   "thumb": "thumb_night_Cam_09.jpg",
    "w": 1920,
    "h": 1280
   }

@@ -7,7 +7,7 @@
 <meta name="description" content="Interactive 360° bedroom presentation - Christina Jones · Maureen Stevens Design">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Christina Jones · Bedroom 360°">
-<meta property="og:description" content="Look around the bedroom in 360° and browse the photographs.">
+<meta property="og:description" content="Look around the bedroom in 360°, day and night, and browse the photographs.">
 <meta property="og:image" content="https://ms3dstudio.github.io/3d-previews/christina-jones-bedroom/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -172,7 +172,7 @@
 </section>
 
 <div class="title ui"><h2>Christina Jones</h2><p>Bedroom · 360° tour</p></div>
-<div class="hint ui" id="hint">Drag to look around · camera icons show photos · use View below to face each wall</div>
+<div class="hint ui" id="hint">Drag to look around · camera icons show photos · use View below to face each wall · switch Day / Night below</div>
 <div class="loc-name" id="locname"></div>
 
 <div class="topbtns ui">
@@ -208,7 +208,7 @@
 </section>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.js"></script>
-<script src="tour.js"></script>
+<script src="tour.js?v=2"></script>
 <script>
 (async function(){
   const $ = id => document.getElementById(id);
@@ -232,8 +232,9 @@
   const S = {node:T.default_node, floor:T.default_floor, doors:T.default_doors, time:'day', view:null};
   const TIMES = T.times || ['day'];
   const nodeById = Object.fromEntries(T.nodes.map(n=>[n.id,n]));
-  const stills = T.stills || [];
-  const stillIdx = Object.fromEntries(stills.map((s,i)=>[s.id,i]));
+  // the gallery shows the photos that match the current lighting (day / night)
+  const allStills = T.stills || [];
+  const stillsFor = t => { const l = allStills.filter(s => (s.time||'day') === t); return l.length ? l : allStills; };
   const sid = (n,f,d,t)=>`${n}|${f}|${d}|${t}`;
   const url = (n,f,d,t)=>{let p=nodeById[n].panos[`floor-${f}__doors-${d}`]; if(p && t==='night') p=p.night; return p ? (useMobile ? p.mobile : p.full) : null;};
 
@@ -250,9 +251,14 @@
     for (const a of n.appliances) hs.push({pitch:a.pitch, yaw:a.yaw, type:'custom', createTooltipFunc:tip,
         createTooltipArgs:{cls:'hs-app', label:(d==='closed'?'Open ':'Close ')+a.label},
         clickHandlerFunc:()=>setDoors(S.doors==='closed'?'all_open':'closed')});
-    for (const p of (n.photos||[])) if (p.still in stillIdx) hs.push({pitch:p.pitch, yaw:p.yaw, type:'custom', createTooltipFunc:tip,
-        createTooltipArgs:{cls:'hs-cam', icon:ICON_CAM, label:'Photo · '+stills[stillIdx[p.still]].caption},
-        clickHandlerFunc:()=>openGallery(stillIdx[p.still])});
+    const tStills = stillsFor(t);
+    for (const p of (n.photos||[])) {
+      const k = tStills.findIndex(s => s.id === p.still || s.id === `${t}_${p.still}`);
+      if (k < 0) continue;
+      hs.push({pitch:p.pitch, yaw:p.yaw, type:'custom', createTooltipFunc:tip,
+        createTooltipArgs:{cls:'hs-cam', icon:ICON_CAM, label:'Photo · '+tStills[k].caption},
+        clickHandlerFunc:()=>openGallery(k)});
+    }
     scenes[sid(n.id,f,d,t)] = {type:'equirectangular', panorama:u, hfov:fitH(n.view.hfov||100),
                              yaw:n.view.yaw||0, pitch:n.view.pitch||0, hotSpots:hs};
   }
@@ -334,23 +340,31 @@
   $('btnFull').onclick = ()=>{ document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); };
 
   // ---------- gallery ----------
-  let gi=0;
+  let gi=0, G=stillsFor(S.time);
   const gal=$('gal'), img=$('galImg'), thumbs=$('galThumbs');
-  stills.forEach((s,i)=>{ const b=document.createElement('button'); b.type='button'; b.setAttribute('aria-label',s.caption);
-    b.innerHTML=`<img src="${s.thumb}" alt="" loading="lazy">`; b.onclick=()=>show(i); thumbs.appendChild(b); });
-  if(!stills.length) $('btnGallery').style.display='none';
+  function buildThumbs(){
+    thumbs.innerHTML='';
+    G.forEach((s,i)=>{ const b=document.createElement('button'); b.type='button'; b.setAttribute('aria-label',s.caption);
+      b.innerHTML=`<img src="${s.thumb}" alt="" loading="lazy">`; b.onclick=()=>show(i); thumbs.appendChild(b); });
+  }
+  if(!allStills.length) $('btnGallery').style.display='none';
   function show(i){
-    gi=(i+stills.length)%stills.length; const s=stills[gi];
+    gi=(i+G.length)%G.length; const s=G[gi];
     img.classList.remove('in');
     const pre=new Image();
     pre.onload=()=>{ img.src=s.src; img.alt=s.caption; requestAnimationFrame(()=>requestAnimationFrame(()=>img.classList.add('in'))); };
     pre.src=s.src;
-    $('galCap').innerHTML=`${s.caption}<small>${String(gi+1).padStart(2,'0')} / ${String(stills.length).padStart(2,'0')}</small>`;
+    $('galCap').innerHTML=`${s.caption}<small>${String(gi+1).padStart(2,'0')} / ${String(G.length).padStart(2,'0')}</small>`;
     [...thumbs.children].forEach((b,k)=>b.classList.toggle('on',k===gi));
     thumbs.children[gi]?.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
-    const nx=new Image(); nx.src=stills[(gi+1)%stills.length].src;
+    const nx=new Image(); nx.src=G[(gi+1)%G.length].src;
   }
-  function openGallery(i=0){ gal.classList.add('open'); gal.setAttribute('aria-hidden','false'); $('galCount').textContent=stills.length+' images'; show(i); }
+  function openGallery(i=0){
+    G=stillsFor(S.time); buildThumbs();
+    gal.classList.add('open'); gal.setAttribute('aria-hidden','false');
+    $('galCount').textContent = G.length+' images' + (TIMES.length>1 ? ' · '+(S.time==='night'?'Night':'Day') : '');
+    show(i);
+  }
   function closeGallery(){ gal.classList.remove('open'); gal.setAttribute('aria-hidden','true'); }
   $('btnGallery').onclick=()=>openGallery(0);
   $('galClose').onclick=closeGallery; $('galPrev').onclick=()=>show(gi-1); $('galNext').onclick=()=>show(gi+1);
