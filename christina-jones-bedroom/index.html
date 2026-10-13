@@ -7,7 +7,7 @@
 <meta name="description" content="Interactive 360° bedroom presentation - Christina Jones · Maureen Stevens Design">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Christina Jones · Bedroom 360°">
-<meta property="og:description" content="Look around the bedroom in 360°, day and night, and browse the photographs.">
+<meta property="og:description" content="Compare the bedroom design versions in 360°, day and night, and browse the photographs.">
 <meta property="og:image" content="https://ms3dstudio.github.io/3d-previews/christina-jones-bedroom/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -90,6 +90,8 @@
   .seg button:hover{border-color:var(--gold);transform:translateY(-1px)}
   .seg button.on{background:var(--gold);border-color:var(--gold);color:var(--ink)}
   .seg button:focus-visible,.chip:focus-visible,.logo:focus-visible{outline:2px solid var(--gold-soft);outline-offset:2px}
+  .vnote{font:400 12px/1.45 Jost;color:rgba(244,239,230,.84);margin:-2px 0 2px;max-width:540px}
+  .vnote b{font-weight:500;color:var(--gold-soft)}
 
   .logo{position:fixed;right:20px;bottom:20px;z-index:5;width:104px;display:block;cursor:pointer;outline:none;
         filter:drop-shadow(0 6px 18px rgba(0,0,0,.45))}
@@ -147,6 +149,7 @@
     .panel{left:10px;bottom:10px;padding:10px 12px;gap:8px;max-width:calc(100vw - 104px)}
     .lbl{min-width:0;width:100%;font-size:9px}
     .seg button{font-size:12px;padding:7px 10px}
+    .vnote{font-size:11px}.vnote .common{display:none}
     .logo{right:10px;bottom:10px;width:76px}
     .topbtns{right:10px;top:12px}.chip{padding:9px 11px}.chip b{display:none}
     .hint{top:58px;right:10px}
@@ -171,8 +174,8 @@
   </div>
 </section>
 
-<div class="title ui"><h2>Christina Jones</h2><p>Bedroom · 360° tour</p></div>
-<div class="hint ui" id="hint">Drag to look around · camera icons show photos · use View below to face each wall · switch Day / Night below</div>
+<div class="title ui"><h2>Christina Jones</h2><p id="subtitle">Bedroom · 360° tour</p></div>
+<div class="hint ui" id="hint">Drag to look around · camera icons show photos · use View below to face each wall · switch Version and Day / Night below</div>
 <div class="loc-name" id="locname"></div>
 
 <div class="topbtns ui">
@@ -187,6 +190,8 @@
   <div class="row"><span class="lbl">View</span><div class="seg" id="segView"></div></div>
   <div class="row"><span class="lbl">Floor</span><div class="seg" id="segFloor"></div></div>
   <div class="row"><span class="lbl">Appliances</span><div class="seg" id="segDoors"></div></div>
+  <div class="row" id="rowVer"><span class="lbl">Version</span><div class="seg" id="segVer"></div></div>
+  <div class="vnote" id="vnote"></div>
   <div class="row" id="rowTime"><span class="lbl">Lighting</span><div class="seg" id="segTime"></div></div>
 </nav>
 
@@ -208,7 +213,7 @@
 </section>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.js"></script>
-<script src="tour.js?v=2"></script>
+<script src="tour.js?v=3"></script>
 <script>
 (async function(){
   const $ = id => document.getElementById(id);
@@ -229,42 +234,61 @@
 
   if (T.client && T.client.url) $('logo').href = T.client.url;
 
-  const S = {node:T.default_node, floor:T.default_floor, doors:T.default_doors, time:'day', view:null};
   const TIMES = T.times || ['day'];
+  const VERS = T.versions || [{id:'orig', label:'Original'}];
+  const verById = Object.fromEntries(VERS.map(v=>[v.id,v]));
+  const vname = v => verById[v].name || verById[v].label;
+  // ?v=v2&t=night opens a given version and lighting, so each option can be shared on its own
+  const qs = new URLSearchParams(location.search);
+  const qv = (qs.get('v')||'').toLowerCase(), qt = (qs.get('t')||'').toLowerCase();
+  const S = {node:T.default_node, floor:T.default_floor, doors:T.default_doors,
+             time: TIMES.includes(qt) ? qt : 'day',
+             ver: verById[qv] ? qv : (verById[T.default_version] ? T.default_version : VERS[0].id), view:null};
   const nodeById = Object.fromEntries(T.nodes.map(n=>[n.id,n]));
-  // the gallery shows the photos that match the current lighting (day / night)
+  // the gallery shows the current version's photos that match the lighting; a version with day photos only shows those at night too
   const allStills = T.stills || [];
-  const stillsFor = t => { const l = allStills.filter(s => (s.time||'day') === t); return l.length ? l : allStills; };
-  const sid = (n,f,d,t)=>`${n}|${f}|${d}|${t}`;
-  const url = (n,f,d,t)=>{let p=nodeById[n].panos[`floor-${f}__doors-${d}`]; if(p && t==='night') p=p.night; return p ? (useMobile ? p.mobile : p.full) : null;};
+  const vOf = s => s.version || 'orig';
+  const stillsFor = (v,t) => {
+    let l = allStills.filter(s => vOf(s)===v && (s.time||'day')===t);
+    if (!l.length) l = allStills.filter(s => vOf(s)===v && (s.time||'day')==='day');
+    if (!l.length) l = allStills.filter(s => vOf(s)===v);
+    return l.length ? l : allStills;
+  };
+  const sid = (n,f,d,t,v)=>`${n}|${f}|${d}|${t}|${v}`;
+  const url = (n,f,d,t,v)=>{
+    const node=nodeById[n];
+    let p = (v && v!=='orig' && node.vpanos) ? node.vpanos[v] : node.panos[`floor-${f}__doors-${d}`];
+    if(p && t==='night') p=p.night;
+    return p ? (useMobile ? p.mobile : p.full) : null;
+  };
 
   const ICON_ARROW = '<svg viewBox="0 0 24 24"><path d="M12 4l-8 8h5v8h6v-8h5z"/></svg>';
   const ICON_CAM   = '<svg viewBox="0 0 24 24"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13.5" r="3.4"/></svg>';
   function tip(div, a){ div.classList.add(a.cls); div.innerHTML = (a.icon||'') + `<span class="tipx">${a.label}</span>`; }
 
   const scenes = {};
-  for (const n of T.nodes) for (const f of Object.keys(T.floors)) for (const d of Object.keys(T.doors)) for (const t of TIMES){
-    const u = url(n.id,f,d,t); if(!u) continue;
+  for (const n of T.nodes) for (const f of Object.keys(T.floors)) for (const d of Object.keys(T.doors)) for (const t of TIMES) for (const {id:v} of VERS){
+    const u = url(n.id,f,d,t,v); if(!u) continue;
     const hs = [];
     for (const l of n.links) hs.push({pitch:l.pitch, yaw:l.yaw, type:'custom', createTooltipFunc:tip,
         createTooltipArgs:{cls:'hs-link', icon:ICON_ARROW, label:l.label}, clickHandlerFunc:()=>goNode(l.to)});
     for (const a of n.appliances) hs.push({pitch:a.pitch, yaw:a.yaw, type:'custom', createTooltipFunc:tip,
         createTooltipArgs:{cls:'hs-app', label:(d==='closed'?'Open ':'Close ')+a.label},
         clickHandlerFunc:()=>setDoors(S.doors==='closed'?'all_open':'closed')});
-    const tStills = stillsFor(t);
+    const tStills = stillsFor(v,t);
     for (const p of (n.photos||[])) {
-      const k = tStills.findIndex(s => s.id === p.still || s.id === `${t}_${p.still}`);
+      const k = tStills.findIndex(s => s.cam === p.still || s.id === p.still || s.id === `${t}_${p.still}`);
       if (k < 0) continue;
       hs.push({pitch:p.pitch, yaw:p.yaw, type:'custom', createTooltipFunc:tip,
         createTooltipArgs:{cls:'hs-cam', icon:ICON_CAM, label:'Photo · '+tStills[k].caption},
         clickHandlerFunc:()=>openGallery(k)});
     }
-    scenes[sid(n.id,f,d,t)] = {type:'equirectangular', panorama:u, hfov:fitH(n.view.hfov||100),
+    scenes[sid(n.id,f,d,t,v)] = {type:'equirectangular', panorama:u, hfov:fitH(n.view.hfov||100),
                              yaw:n.view.yaw||0, pitch:n.view.pitch||0, hotSpots:hs};
   }
 
   const viewer = pannellum.viewer('pano', {
-    default:{firstScene:sid(S.node,S.floor,S.doors,S.time), sceneFadeDuration:800, autoLoad:true, showControls:false,
+    default:{firstScene:sid(S.node,S.floor,S.doors,S.time,S.ver), sceneFadeDuration:800, autoLoad:true, showControls:false,
              compass:false, minHfov:45, maxHfov:MAXH, friction:0.15, autoRotate:reduce?0:-2.2, autoRotateInactivityDelay:-1},
     scenes
   });
@@ -286,16 +310,24 @@
 
   function showLoc(label){ const el=$('locname'); el.textContent=label; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
 
-  function load(n,f,d,t){
-    const id=sid(n,f,d,t); if(!scenes[id]) return;
-    const moving = n!==S.node;
+  function syncUrl(){
+    if (VERS.length<2 && TIMES.length<2) return;
+    const q = new URLSearchParams(location.search);
+    q.set('v', S.ver); if (S.time!=='day') q.set('t', S.time); else q.delete('t');
+    history.replaceState(null, '', location.pathname + '?' + q.toString() + location.hash);
+  }
+  function load(n,f,d,t,v){
+    const id=sid(n,f,d,t,v); if(!scenes[id]) return;
+    const moving = n!==S.node, newVer = v!==S.ver;
     if(moving) S.view=null;
-    S.node=n; S.floor=f; S.doors=d; S.time=t; paint();
+    S.node=n; S.floor=f; S.doors=d; S.time=t; S.ver=v; paint(); syncUrl();
     viewer.loadScene(id,'same','same','same');
     if(moving) setTimeout(()=>showLoc(nodeById[n].label), 500);
+    else if(newVer) setTimeout(()=>showLoc(vname(v)), 350);
   }
-  const goNode=n=>load(n,S.floor,S.doors,S.time), setFloor=f=>load(S.node,f,S.doors,S.time),
-        setDoors=d=>load(S.node,S.floor,d,S.time), setTime=t=>load(S.node,S.floor,S.doors,t);
+  const goNode=n=>load(n,S.floor,S.doors,S.time,S.ver), setFloor=f=>load(S.node,f,S.doors,S.time,S.ver),
+        setDoors=d=>load(S.node,S.floor,d,S.time,S.ver), setTime=t=>load(S.node,S.floor,S.doors,t,S.ver),
+        setVer=v=>load(S.node,S.floor,S.doors,S.time,v);
 
   function seg(el, items, cur, fn){
     el.innerHTML='';
@@ -321,26 +353,37 @@
     seg($('segFloor'), fl, S.floor, setFloor);
     seg($('segDoors'), [['closed','Closed'],['all_open','Open']].filter(([k])=>k in T.doors), S.doors, setDoors);
     if (TIMES.length>1) seg($('segTime'), [['day','Day'],['night','Night']], S.time, setTime);
+    if (VERS.length>1) seg($('segVer'), VERS.map(v=>[v.id, v.label]), S.ver, setVer);
     rowShow('segNode', T.nodes.length>1);
     rowShow('segView', views.length>0);
     rowShow('segFloor', Object.keys(T.floors).length>1);
     rowShow('segDoors', Object.keys(T.doors).length>1);
     rowShow('segTime', TIMES.length>1);
+    rowShow('segVer', VERS.length>1);
+    const V = verById[S.ver], vn = $('vnote');
+    vn.style.display = VERS.length>1 ? '' : 'none';
+    vn.innerHTML = `<b>${vname(S.ver)}</b>${V.note ? ' · '+V.note : ''}${V.common ? `<span class="common"> · ${V.common}</span>` : ''}`;
+    $('subtitle').textContent = 'Bedroom · 360° tour' + (VERS.length>1 ? ' · ' + vname(S.ver) : '');
   }
   paint(); addEventListener('resize', paint);
   const clearView = ()=>{ if(S.view!==null){ S.view=null; paint(); } };
   viewer.on('mousedown', clearView); viewer.on('touchstart', clearView);
 
+  // warm the cache with the panoramas one click away: other lighting of this version, other versions in this lighting
+  const fetched = new Set();
   function prefetch(){
-    setTimeout(()=>{ for (const f of Object.keys(T.floors)) for (const d of Object.keys(T.doors)){
-      const u=url(S.node,f,d,S.time); if(u){ const i=new Image(); i.src=u; } }
-      for (const t of TIMES){ const u=url(S.node,S.floor,S.doors,t); if(u){ const i=new Image(); i.src=u; } } }, 1500);
+    setTimeout(()=>{
+      const pre = u => { if(u && !fetched.has(u)){ fetched.add(u); const i=new Image(); i.src=u; } };
+      fetched.add(url(S.node,S.floor,S.doors,S.time,S.ver));
+      for (const t of TIMES) pre(url(S.node,S.floor,S.doors,t,S.ver));
+      for (const {id} of VERS) pre(url(S.node,S.floor,S.doors,S.time,id));
+    }, 1500);
   }
 
   $('btnFull').onclick = ()=>{ document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); };
 
   // ---------- gallery ----------
-  let gi=0, G=stillsFor(S.time);
+  let gi=0, G=stillsFor(S.ver,S.time);
   const gal=$('gal'), img=$('galImg'), thumbs=$('galThumbs');
   function buildThumbs(){
     thumbs.innerHTML='';
@@ -360,9 +403,11 @@
     const nx=new Image(); nx.src=G[(gi+1)%G.length].src;
   }
   function openGallery(i=0){
-    G=stillsFor(S.time); buildThumbs();
+    G=stillsFor(S.ver,S.time); buildThumbs();
     gal.classList.add('open'); gal.setAttribute('aria-hidden','false');
-    $('galCount').textContent = G.length+' images' + (TIMES.length>1 ? ' · '+(S.time==='night'?'Night':'Day') : '');
+    const gt = (G[0] && G[0].time) || 'day';
+    $('galCount').textContent = G.length+' images' + (VERS.length>1 ? ' · '+vname(S.ver) : '')
+      + (TIMES.length>1 ? ' · '+(gt==='night'?'Night':'Day')+(gt!==S.time?' photos':'') : '');
     show(i);
   }
   function closeGallery(){ gal.classList.remove('open'); gal.setAttribute('aria-hidden','true'); }
