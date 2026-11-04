@@ -3,6 +3,10 @@ import { project, mmToPage } from "./tracker.js";
 
 const ART = { x: 17, y: 42, w: 181.9, h: 135.84 };
 export const ZONE_PASS = 0.5, PAGE_PASS = 0.6;
+// Pages with a colour reference ("ref"): the WHOLE picture must be finished, and of what is coloured, 60% must match the colour page. A pencil page always has small gaps, so finished = 80% of the cells.
+// The picture is also cut into squares of about 23 mm, and nearly all of them must be coloured, so big trees cannot make up for a corner or a character left white.
+export const FINISHED = 0.8, MATCH = 0.6, TILE_DONE = 0.5, TILES_DONE = 0.92;
+const TILES_X = 8, TILES_Y = 6, TILE_MIN = 25;
 const NAMES = ["none", "red", "orange", "yellow", "green", "blue", "purple", "pink", "brown", "grey"];
 // neighbours a pencil can honestly look like under a phone camera
 const NEAR = { red: ["red", "orange", "pink"], orange: ["orange", "red", "yellow", "brown"], yellow: ["yellow", "orange"], green: ["green"], blue: ["blue", "purple"], purple: ["purple", "blue", "pink"], pink: ["pink", "red", "purple"], brown: ["brown", "orange", "red"], grey: ["grey"] };
@@ -19,7 +23,7 @@ function family(r, g, b) {
   if (h >= 345 || h < 12) return 1;
   if (h < 38) return 2;
   if (h < 68) return 3;
-  if (h < 165) return 4;
+  if (h < 178) return 4;   // real green pencils lean toward teal under a phone camera
   if (h < 255) return 5;
   if (h < 300) return 6;
   return 7;
@@ -48,6 +52,47 @@ export class ColorCheck {
     }
     this.paper = PAPER_SPOTS.map(([x, y]) => mmToPage(x, y));
     this.total = this.zones.reduce((s, z) => s + z.a, 0) || 1;
+    this.ref = null;
+    if (data.ref) {
+      const r = atob(data.ref);
+      this.ref = [];
+      this.nearOf = NAMES.map((name) => new Set((NEAR[name] || []).map((v) => NAMES.indexOf(v))));
+      for (let y = 0; y < this.h; y++) for (let x = 0; x < this.w; x++) {
+        const f = r.charCodeAt(y * this.w + x);
+        if (f) this.ref.push({ f, i: y * this.w + x, tile: Math.floor((y * TILES_Y) / this.h) * TILES_X + Math.floor((x * TILES_X) / this.w), p: mmToPage(ART.x + ((x + 0.5) / this.w) * ART.w, ART.y + ((y + 0.5) / this.h) * ART.h) });
+      }
+      this.state = new Uint8Array(this.ref.length);
+    }
+  }
+
+  // the whole picture against the colour page. state of each cell: 1 still white, 2 coloured and matching, 3 coloured but another colour
+  measureWhole(read, wr, wg, wb) {
+    let seen = 0, coloured = 0, right = 0;
+    const lacking = {};
+    const tileSeen = new Uint16Array(TILES_X * TILES_Y), tileDone = new Uint16Array(TILES_X * TILES_Y);
+    this.ref.forEach((c, k) => {
+      const v = read(c.p);
+      if (!v) { this.state[k] = 0; return; }
+      seen++;
+      tileSeen[c.tile]++;
+      const f = family(Math.min(v[0] / wr, 1), Math.min(v[1] / wg, 1), Math.min(v[2] / wb, 1));
+      if (f === 0 || f === 9) {
+        this.state[k] = 1;
+        lacking[c.f] = (lacking[c.f] || 0) + 1;
+      } else {
+        coloured++;
+        tileDone[c.tile]++;
+        if (this.nearOf[c.f].has(f)) { right++; this.state[k] = 2; } else { this.state[k] = 3; lacking[c.f] = (lacking[c.f] || 0) + 1; }
+      }
+    });
+    if (seen < this.ref.length * 0.7) return null;
+    const coverage = coloured / seen, match = coloured ? right / coloured : 0;
+    let tiles = 0, full = 0;
+    for (let t = 0; t < tileSeen.length; t++) if (tileSeen[t] >= TILE_MIN) { tiles++; if (tileDone[t] / tileSeen[t] >= TILE_DONE) full++; }
+    const tilesDone = tiles ? full / tiles : 0;
+    const finished = coverage >= FINISHED && tilesDone >= TILES_DONE;
+    const sorted = Object.keys(lacking).sort((a, b) => lacking[b] - lacking[a]).map((i) => NAMES[i]);
+    return { whole: true, coverage, match, tilesDone, score: Math.min(coverage / FINISHED, 1) * Math.min(match / MATCH, 1), blank: coverage < 0.1, finished, asks: sorted, ask: sorted[0] || null, pass: finished && match >= MATCH, failing: [true] };
   }
 
   // img: the camera frame (ImageData); H: page -> frame. Returns the page's score and what to ask for next, or null if too little of the page is in view.
@@ -73,6 +118,7 @@ export class ColorCheck {
     if (pr.length < 6) return null;
     const hi = (a) => a.sort((x, y) => x - y)[Math.floor(a.length * 0.75)];
     const wr = hi(pr) || 1, wg = hi(pg) || 1, wb = hi(pb) || 1;
+    if (this.ref) return this.measureWhole((q) => { const p = project(H, q[0], q[1]); return avg(p[0], p[1]); }, wr, wg, wb);
     const n = this.zones.length;
     const seen = new Uint32Array(n), right = new Uint32Array(n), coloured = new Uint32Array(n);
     for (const c of this.cells) {
@@ -103,6 +149,16 @@ export class ColorCheck {
   // A soft glow over the zones of one colour that still want colouring, drawn on a canvas the size of the zone map
   paintGlow(ctx, colour, failing, ask) {
     const img = ctx.createImageData(this.w, this.h);
+    if (this.ref) {
+      // what is still white, or another colour, softly shows the colour it has on the colour page
+      this.ref.forEach((c, k) => {
+        if (this.state[k] !== 1 && this.state[k] !== 3) return;
+        const v = parseInt(SHOW[NAMES[c.f]].slice(1), 16);
+        img.data[c.i * 4] = v >> 16; img.data[c.i * 4 + 1] = (v >> 8) & 255; img.data[c.i * 4 + 2] = v & 255; img.data[c.i * 4 + 3] = 255;
+      });
+      ctx.putImageData(img, 0, 0);
+      return;
+    }
     const c = parseInt(colour.slice(1), 16);
     for (let i = 0; i < this.map.length; i++) {
       const z = this.map[i];

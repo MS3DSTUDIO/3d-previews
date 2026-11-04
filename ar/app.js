@@ -3,7 +3,7 @@
 // The sound file is the clock: the animation always shows the time the sound has reached, so they cannot drift apart.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { fitPage, followOne, PageFilter, poseMatrix, pageOfId } from "./tracker.js";
+import { PageFilter, poseMatrix, focalFrom } from "./tracker.js";
 import { ColorCheck, SHOW } from "./colorcheck.js";
 import { PageGround } from "./ground.js";
 
@@ -206,7 +206,7 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check, captions)
   let f = Math.max(vw, vh) * FOCAL;   // phone lenses differ a little; the page itself still lines up, only the height of the scene changes slightly
 
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));   // sharp enough on a phone, and every saved pixel keeps the tracking smooth
   $("#ar").appendChild(renderer.domElement);
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(50, 1, 0.01, 50);
@@ -305,11 +305,21 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check, captions)
     if (speaking || performance.now() < nextSpeak) return;
     if (r.blank && !saidStart) { saidStart = true; say("start"); return; }
     if (r.score >= 0.3 && !saidAlmost) { saidAlmost = true; say("almost"); return; }
+    if (r.whole) {
+      // not finished yet: keep going. Finished, but the colours do not match the colour page: say which colour is missing most. Pink has no voice line yet.
+      if (!r.finished) { say("almost"); return; }
+      const line = r.asks.find((a) => LINES[a]);
+      say(line || "almost");
+      return;
+    }
     if (check.any) { say(r.score >= 0.3 ? "almost" : "start"); return; }
-    if (r.ask) say(r.ask);
+    if (r.ask) say(LINES[r.ask] ? r.ask : "almost");
   };
   const judge = (r) => {
     state.score = r.score;
+    state.coverage = r.coverage;
+    state.match = r.match;
+    state.tilesDone = r.tilesDone;
     state.measures++;
     lastResult = r;
     if (r.pass) { passes++; fails = 0; } else { fails++; passes = 0; }
@@ -323,7 +333,7 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check, captions)
     }
     if (state.phase === "check" && fails >= 3) state.phase = "guide";
     if (state.phase === "guide") {
-      if (r.ask !== currentAsk || state.measures % 4 === 0) { currentAsk = r.ask; updateGuide(r); }
+      if (r.ask !== currentAsk || state.measures % 4 === 0 || r.whole) { currentAsk = r.ask; updateGuide(r); }
       guideNow(r);
     }
   };
@@ -372,26 +382,48 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check, captions)
     showSound();
   });
 
-  // camera frames go to the marker finder one at a time
+  // camera frames go to the tracker one at a time
   const grab = document.createElement("canvas");
   grab.width = vw; grab.height = vh;
   const gx = grab.getContext("2d", { willReadFrequently: true });
+  // Once the page is held, the picture on screen is the very frame the page was measured in, so the scene and the paper can never slide against each other.
+  const shown = $("#shown");
+  shown.width = vw; shown.height = vh;
+  const showCtx = shown.getContext("2d", { alpha: false });
   const worker = new Worker("../tracker_worker.js");
-  let busy = false, Hraw = null, Hshow = null, lastSeen = 0, candidates = 0, otherPage = 0, otherCount = 0, misses = 0;
+  let busy = false, Hraw = null, Hshow = null, lastSeen = 0, otherPage = 0, otherCount = 0, misses = 0, lastVideoTime = -1, lastDraw = 0;
+  const lens = [];
   const filter = new PageFilter();
   const mine = Number(id);
   const send = () => {
-    if (busy || video.readyState < 2) return;
+    if (busy || video.readyState < 2 || video.currentTime === lastVideoTime) return;
+    lastVideoTime = video.currentTime;
     if (video.videoWidth !== vw || video.videoHeight !== vh) {   // the phone was turned
       vw = video.videoWidth; vh = video.videoHeight;
       f = Math.max(vw, vh) * FOCAL;
+      lens.length = 0;
       grab.width = vw; grab.height = vh;
+      shown.width = vw; shown.height = vh;
       fit();
     }
     busy = true;
     gx.drawImage(video, 0, 0, vw, vh);
     const img = gx.getImageData(0, 0, vw, vh);
-    worker.postMessage({ buf: img.data.buffer, w: vw, h: vh, t: performance.now() }, [img.data.buffer]);
+    worker.postMessage({ buf: img.data.buffer, w: vw, h: vh, t: performance.now(), page: mine }, [img.data.buffer]);
+  };
+  // phones' lenses differ: learn this one from the page itself, once, soon after it is found
+  const learnLens = (H) => {
+    if (lens.length >= 45) return;
+    const e = focalFrom(H, vw, vh);
+    if (!e) return;
+    lens.push(e);
+    if (lens.length === 45) {
+      lens.sort((a, b) => a - b);
+      const long = Math.max(vw, vh), got = lens[22] / long, spread = (lens[40] - lens[4]) / lens[22];
+      state.lens = got;
+      // only an answer that makes sense for a phone camera, and that held still (a curled page gives nonsense): otherwise the usual lens stays
+      if (got > 0.62 && got < 1.05 && spread < 0.1) { f = lens[22]; fit(); }
+    }
   };
   const showOtherPage = (p) => {
     const b = $("#other-page");
@@ -404,41 +436,27 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check, captions)
     busy = false;
     const now = performance.now();
     state.detectMs = e.data.ms;
-    const list = [], others = {};
-    for (const mk of e.data.markers) {
-      const p = pageOfId(mk.id);
-      if (p === mine) list.push({ index: mk.id % 4, corners: mk.corners });
-      else others[p] = (others[p] || 0) + 1;
-    }
-    state.markers = list.length;
-    let H = null;
-    if (list.length >= 2) {
-      const r = fitPage(list);
-      if (r) H = r.H;
-    } else if (list.length === 1 && Hraw && now - lastSeen < 600) {
-      H = followOne(Hraw, list[0]);
-    }
-    if (H && !state.visible) {
-      // first sight: two frames in a row, so a chance look-alike in a picture can never start anything
-      candidates++;
-      if (candidates < 2) H = null;
-    }
+    state.markers = e.data.markers;
+    state.points = e.data.points;
+    const H = e.data.H, others = e.data.others;
     misses = H ? 0 : misses + 1;
     if (H) {
-      candidates = 0;
       Hraw = H;
       lastSeen = now;
       Hshow = filter.apply(H, now);
       if (!state.visible) onFound();
       otherCount = 0;
-      // the frame the markers were found in is still on the canvas: read the colours from it
-      if ((state.phase === "check" || state.phase === "guide") && list.length >= 2 && now - lastMeasure > MEASURE_MS) {
+      learnLens(H);
+      showCtx.drawImage(grab, 0, 0);
+      shown.hidden = false;
+      // the frame the page was measured in is still on the canvas: read the colours from it
+      if ((state.phase === "check" || state.phase === "guide") && now - lastMeasure > MEASURE_MS) {
         lastMeasure = now;
         const r = check.measure(gx.getImageData(0, 0, vw, vh), H);
         if (r) judge(r);
       }
+      draw();
     } else {
-      if (list.length === 0) candidates = 0;
       const best = Object.keys(others).find((k) => others[k] >= 2);
       otherCount = best ? otherCount + 1 : 0;
       otherPage = best ? Number(best) : 0;
@@ -452,11 +470,16 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check, captions)
   let silentT = 0, last = performance.now();
   renderer.setAnimationLoop(() => {
     const now = performance.now();
-    const dt = (now - last) / 1000;
-    last = now;
     send();
     // lost means several looks in a row without the page: a slow phone that simply looks less often has not lost it
-    if (state.visible && misses >= 3 && now - lastSeen > HIDE_AFTER_MS) { onLost(); Hraw = null; filter.reset(); candidates = 0; }
+    if (state.visible && misses >= 3 && now - lastSeen > HIDE_AFTER_MS) { onLost(); Hraw = null; filter.reset(); shown.hidden = true; }
+    if (now - lastDraw > 40) draw();   // normally each new measured frame draws the scene; this only keeps it alive between them
+  });
+  function draw() {
+    const now = performance.now();
+    lastDraw = now;
+    const dt = (now - last) / 1000;
+    last = now;
     anchor.visible = state.visible && !!Hshow;
     if (anchor.visible) {
       anchor.matrix.fromArray(poseMatrix(Hshow, vw, vh, f));
@@ -470,7 +493,7 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check, captions)
       kimo.holder.visible = kimoOn;
       if (kimoOn && anchor.visible) kimo.mixer.setTime((now / 1000) % kimo.dur);
     }
-    if (glow && glow.visible) glow.material.opacity = 0.45 + 0.3 * Math.sin(now / 280);
+    if (glow && glow.visible) glow.material.opacity = check.ref ? 0.3 + 0.12 * Math.sin(now / 420) : 0.45 + 0.3 * Math.sin(now / 280);
     let t = audio.currentTime;
     if (!state.audioOk && state.visible && inStory) t = silentT = Math.min(silentT + dt, clip.duration);
     if (!state.audioOk && !(state.visible && inStory)) t = silentT;
@@ -483,7 +506,7 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check, captions)
     state.time = t;
     if (anchor.visible) ground.update(glow ? [glow] : [], dt * 1000);
     renderer.render(scene, camera);
-  });
+  }
   state.H = () => Hshow;
   if (TEST) {
     state.scene = scene; testMeter(audio, "peak"); testMeter(voice, "voicePeak"); }
