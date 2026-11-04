@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>The Little Discoverers</title>
+<script type="importmap">{"imports":{"three":"../vendor/three.module.js","three/addons/":"../vendor/addons/"}}</script>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../app.css">
+</head>
+<body>
+<video id="cam" playsinline muted autoplay></video>
+<div id="ar"></div>
+<div id="start-panel">
+  <img src="../assets/logo.png" alt="The Little Discoverers" width="600" height="280">
+  <p id="page-name"></p>
+  <div id="progress"><div id="bar"></div></div>
+  <button id="start" hidden>Start the story</button>
+  <p id="tip">Turn your sound on and lay your colored drawing flat.</p>
+  <p id="message" hidden></p>
+</div>
+<p id="hint" hidden></p>
+<button id="other-page" hidden></button>
+<div id="controls" hidden>
+  <button id="sound" aria-pressed="true">Sound on</button>
+  <button id="sound-fix" hidden>Tap for sound</button>
+  <button id="replay" hidden>Play again</button>
+</div>
+<script type="module" src="../app.js"></script>
+</body>
+</html>
