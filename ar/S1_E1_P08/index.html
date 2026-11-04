@@ -17,14 +17,20 @@
   <p id="page-name"></p>
   <div id="progress"><div id="bar"></div></div>
   <button id="start" hidden>Start the story</button>
-  <p id="tip">Turn your sound on and lay your colored drawing flat.</p>
+  <p id="tip">Turn up the volume and lay your colored drawing flat.</p>
   <p id="message" hidden></p>
 </div>
 <p id="hint" hidden></p>
+<p id="caption" hidden><span id="caption-who"></span><span id="caption-text"></span></p>
 <button id="other-page" hidden></button>
+<button id="sound" hidden aria-label="Turn sound off" aria-pressed="true">
+  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z" fill="currentColor"/>
+    <g id="icon-on"><path d="M15.5 9a4.2 4.2 0 0 1 0 6"/><path d="M18 6.5a7.8 7.8 0 0 1 0 11"/></g>
+    <g id="icon-off" style="display:none"><path d="M16 9.5l5 5"/><path d="M21 9.5l-5 5"/></g>
+  </svg>
+</button>
 <div id="controls" hidden>
-  <button id="sound" aria-pressed="true">Sound on</button>
-  <button id="sound-fix" hidden>Tap for sound</button>
   <button id="replay" hidden>Play again</button>
 </div>
 <script type="module" src="../app.js"></script>

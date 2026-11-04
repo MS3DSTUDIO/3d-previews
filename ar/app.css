@@ -14,8 +14,13 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #fff6df; col
 button { font: inherit; font-weight: 700; border: 0; border-radius: 28px; cursor: pointer; }
 #start { min-height: 60px; padding: 0 36px; font-size: 22px; color: #fff; background: #c9321f; }
 #start:disabled { opacity: .6; }
-#hint { position: fixed; z-index: 4; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom)); transform: translateX(-50%); margin: 0; padding: 10px 18px; width: max-content; max-width: 90vw; text-align: center; font-size: 18px; font-weight: 700; color: #fff; background: rgba(24, 48, 95, .85); border-radius: 22px; }
-#controls { position: fixed; z-index: 4; left: 0; right: 0; bottom: calc(20px + env(safe-area-inset-bottom)); display: flex; justify-content: center; gap: 12px; padding: 0 16px; }
-#controls button { min-height: 52px; padding: 0 22px; font-size: 17px; color: #18305f; background: rgba(255, 255, 255, .95); box-shadow: 0 2px 8px rgba(0, 0, 0, .25); }
-#controls #replay, #controls #sound-fix { color: #fff; background: #c9321f; }
-#other-page { position: fixed; z-index: 4; left: 50%; top: calc(24px + env(safe-area-inset-top)); transform: translateX(-50%); min-height: 52px; padding: 0 22px; font-size: 17px; color: #fff; background: #c9321f; width: max-content; max-width: 90vw; }
+#hint { position: fixed; z-index: 4; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%); margin: 0; padding: 10px 18px; width: max-content; max-width: 90vw; text-align: center; font-size: 17px; font-weight: 700; color: #fff; background: rgba(24, 48, 95, .85); border-radius: 18px; }
+@font-face { font-family: "Kalam"; font-weight: 700; font-display: swap; src: url("assets/Kalam-Bold-latin.woff2") format("woff2"); }
+#caption { position: fixed; z-index: 4; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%); margin: 0; padding: 8px 18px 7px; width: max-content; max-width: 92vw; text-align: center; font-family: "Kalam", system-ui, sans-serif; font-weight: 700; font-size: 21px; line-height: 1.25; color: #fff; background: rgba(20, 24, 40, .78); border-radius: 16px; }
+#caption-who { display: block; font-size: 14px; line-height: 1.2; color: #ffd300; }
+#sound { position: fixed; z-index: 4; right: calc(14px + env(safe-area-inset-right)); top: calc(14px + env(safe-area-inset-top)); width: 46px; height: 46px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: #fff; background: rgba(20, 24, 40, .6); }
+#sound.blocked { background: #c9321f; animation: ask 1s ease-in-out infinite; }
+@keyframes ask { 50% { transform: scale(1.14); } }
+#controls { position: fixed; z-index: 4; left: 0; right: 0; bottom: calc(96px + env(safe-area-inset-bottom)); display: flex; justify-content: center; gap: 12px; padding: 0 16px; }
+#controls button { min-height: 52px; padding: 0 22px; font-size: 17px; color: #fff; background: #c9321f; box-shadow: 0 2px 8px rgba(0, 0, 0, .25); }
+#other-page { position: fixed; z-index: 4; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%); min-height: 52px; padding: 0 22px; font-size: 17px; color: #fff; background: #c9321f; width: max-content; max-width: 90vw; }

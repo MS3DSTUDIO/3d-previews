@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { fitPage, followOne, PageFilter, poseMatrix, pageOfId } from "./tracker.js";
 import { ColorCheck, SHOW } from "./colorcheck.js";
+import { PageGround } from "./ground.js";
 
 const PAGES = {
   "01": "The Gate to the Color Forest", "02": "The Three Apples and the Magic Bridge", "03": "The River Comes Back to Life",
@@ -18,7 +19,9 @@ const LOST_GRACE_MS = 1200;  // a hand passing the camera must not stop the stor
 const HIDE_AFTER_MS = 500;   // no marker seen for this long: the scene steps off the page
 const FOCAL = 0.8;           // typical phone main camera: focal length as a share of the long side of the picture
 const MEASURE_MS = 450;      // how often the colours are read while Kimo waits
-const KIMO_SIZE = 1.5, KIMO_LEAN = (35 * Math.PI) / 180, KIMO_AT = [(33 - PAGE_W / 2) / PAGE_W, (PAGE_H / 2 - 212) / PAGE_W];
+const KIMO_SIZE = 1.5, KIMO_AT = [(33 - PAGE_W / 2) / PAGE_W, (PAGE_H / 2 - 212) / PAGE_W];
+const STANDING = Math.PI / 2;   // a figure's up = straight out of the paper
+const WITH_CAPTIONS = new Set(["01"]);   // pages whose story has P##_captions.json
 const LINES = {
   start: "Let's color this picture first, and then the magic will begin!",
   almost: "Great job! Just a little more color, and the magic will wake up!",
@@ -53,6 +56,30 @@ function hint(text) {
   const h = $("#hint");
   h.textContent = text || "";
   h.hidden = !text;
+  if (text) caption("");
+}
+
+// the words being spoken, with who says them
+let captionNow = null;
+function caption(text, who) {
+  const key = text ? `${who}|${text}` : "";
+  if (key === captionNow) return;
+  captionNow = key;
+  const c = $("#caption");
+  c.hidden = !text;
+  if (!text) return;
+  $("#caption-who").textContent = who;
+  $("#caption-text").textContent = text;
+  $("#hint").hidden = true;
+  state.caption = text;
+}
+
+// everything that stands on the page casts a shadow; the page itself is the real paper
+function dress(root) {
+  root.traverse((o) => {
+    if (/^(Page|Ground)/.test(o.name)) o.visible = false;
+    if (o.isMesh) { o.frustumCulled = false; o.castShadow = true; }
+  });
 }
 
 // a model made on the 4.4-wide scene page, standing on the drawing
@@ -62,35 +89,29 @@ function placeOnPage(root) {
   const w = box.max.x - box.min.x;
   const cx = (box.max.x + box.min.x) / 2, cz = (box.max.z + box.min.z) / 2;
   // the real painted paper shows through: only what stands on it is drawn
-  root.traverse((o) => {
-    if (/^(Page|Ground)/.test(o.name)) o.visible = false;
-    if (o.isMesh) o.frustumCulled = false;
-  });
+  dress(root);
   const holder = new THREE.Group();
   const s = ART_W / PAGE_W / w;
   holder.scale.setScalar(s);
-  holder.rotation.x = Math.PI / 2;  // the scene's up becomes the page's facing direction
+  holder.rotation.x = STANDING;
   holder.position.set(-cx * s, ART_Y + cz * s, 0);
   holder.add(root);
   return holder;
 }
 
-// Kimo the guide: bigger than in the story and leaning back like a pop-up figure, so a phone held above the page sees his face. His feet stand beside his printed head.
+// Kimo the guide: bigger than in the story, standing straight up on the paper like a real toy. His feet stand beside his printed head.
 function placeKimo(root) {
   root.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(root.getObjectByName("Page"));
   const w = box.max.x - box.min.x;
   const unit = w / 4.4;   // one scene unit (see ld_lib.py)
-  root.traverse((o) => {
-    if (/^(Page|Ground)/.test(o.name)) o.visible = false;
-    if (o.isMesh) o.frustumCulled = false;
-  });
+  dress(root);
   const holder = new THREE.Group();
   const s = (ART_W / PAGE_W / w) * KIMO_SIZE;
   holder.scale.setScalar(s);
-  holder.rotation.x = KIMO_LEAN;
+  holder.rotation.x = STANDING;
   const feet = new THREE.Vector3(-1.62 * unit, 0, 0.92 * unit).multiplyScalar(s).applyEuler(holder.rotation);
-  holder.position.set(KIMO_AT[0], KIMO_AT[1], 0.01).sub(feet);
+  holder.position.set(KIMO_AT[0], KIMO_AT[1], 0).sub(feet);
   holder.add(root);
   return holder;
 }
@@ -139,27 +160,34 @@ async function main() {
     }
   }
 
+  let captions = [];
+  if (WITH_CAPTIONS.has(id)) {
+    try {
+      captions = (await fetch(`${base}P${id}_captions.json`).then((r) => r.json())).lines;
+    } catch (err) {
+      console.error("captions not available", err);
+    }
+  }
+
   $("#progress").hidden = true;
   $("#start").hidden = false;
 
-  // a browser allows sound only after a tap, so the Start tap also unlocks both sounds
+  // A browser allows sound only after a tap. Sound is on from here: the Start tap unlocks both sounds, in the same moment (a later call would no longer count as the tap on an iPhone).
   $("#start").addEventListener("click", async () => {
     $("#start").disabled = true;
+    const unlock = (el) => {
+      const p = el.play();
+      el.pause();       // stopped at once, so no scrap of sound is heard; being stopped is not the same as being refused
+      return p.then(() => true, (e) => e.name !== "NotAllowedError");
+    };
+    const heard = await Promise.all([unlock(audio), unlock(voice)]);
+    state.audioOk = heard[0];
+    state.soundBlocked = !heard.every(Boolean);
+    audio.currentTime = 0;
     try {
-      await audio.play();
-      audio.pause();
-      audio.currentTime = 0;
-      state.audioOk = true;
-      await voice.play();
-      voice.pause();
-      voice.currentTime = 0;
-    } catch (err) {
-      state.audioOk = false;
-    }
-    try {
-      await startAR(audio, voice, holder, mixer, clip, kimo, check);
+      await startAR(audio, voice, holder, mixer, clip, kimo, check, captions);
       $("#start-panel").hidden = true;
-      $("#controls").hidden = false;
+      $("#sound").hidden = false;
       hint(`Point your camera at the drawing you colored, page ${Number(id)}. Show its black corner squares.`);
     } catch (err) {
       console.error(err && err.stack || err);
@@ -168,7 +196,7 @@ async function main() {
   }, { once: true });
 }
 
-async function startAR(audio, voice, holder, mixer, clip, kimo, check) {
+async function startAR(audio, voice, holder, mixer, clip, kimo, check, captions) {
   const video = $("#cam");
   const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: TEST ? true : { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } } });
   video.srcObject = stream;
@@ -182,14 +210,14 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check) {
   $("#ar").appendChild(renderer.domElement);
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(50, 1, 0.01, 50);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xb8b0a0, 1.9));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-  sun.position.set(0.3, 0.6, 1);
-  scene.add(sun);
+  // the room: light from above the paper, and white paper bouncing some back up; the sun lives with the page (ground.js)
+  const room = new THREE.HemisphereLight(0xffffff, 0xd8cfc0, 1.55);
+  scene.add(room);
   const anchor = new THREE.Group();
   anchor.matrixAutoUpdate = false;
   anchor.visible = false;
   scene.add(anchor);
+  const ground = new PageGround(renderer, scene, anchor);
   anchor.add(holder);
   if (kimo) { anchor.add(kimo.holder); kimo.holder.visible = false; }
 
@@ -219,11 +247,26 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check) {
   fit();
   window.addEventListener("resize", fit);
 
-  const showPlay = (on) => { $("#replay").hidden = !on; };
+  const showPlay = (on) => { $("#replay").hidden = !on; $("#controls").hidden = !on; };
+  // the small speaker in the corner: sound is on unless the child turns it off, or the browser refused it (then it pulses until tapped)
+  const showSound = () => {
+    const b = $("#sound"), off = audio.muted || state.soundBlocked;
+    $("#icon-on").style.display = off ? "none" : "";
+    $("#icon-off").style.display = off ? "" : "none";
+    b.classList.toggle("blocked", !!state.soundBlocked);
+    b.setAttribute("aria-label", off ? "Turn sound on" : "Turn sound off");
+    b.setAttribute("aria-pressed", String(!off));
+  };
+  showSound();
+  const refused = (e) => {
+    if (e && e.name === "AbortError") return;   // another line simply took over
+    state.soundBlocked = true;
+    showSound();
+  };
   const playSound = () => {
     if (state.ended) return;
-    audio.play().then(() => { state.audioOk = true; $("#sound-fix").hidden = true; })
-      .catch(() => { state.audioOk = false; $("#sound-fix").hidden = false; });
+    audio.play().then(() => { state.audioOk = true; state.soundBlocked = false; showSound(); })
+      .catch((e) => { if (!e || e.name !== "AbortError") state.audioOk = false; refused(e); });
   };
   const askForPage = () => hint(`Point your camera at the drawing you colored, page ${Number(id)}. Show its black corner squares.`);
 
@@ -238,15 +281,17 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check) {
   const say = (line) => {
     speaking = true;
     state.lines.push(line);
-    hint(LINES[line]);
+    hint("");
+    caption(LINES[line], "Kimo");
     voice.src = `${base}kimo_${line}.mp3`;
-    voice.play().catch(() => { speaking = false; nextSpeak = performance.now() + 6000; });
+    voice.play().catch((e) => { speaking = false; nextSpeak = performance.now() + 6000; refused(e); });
   };
   const beginStory = () => {
     clearTimeout(yayTimer);
     state.phase = "story";
     if (glow) glow.visible = false;
     hint("");
+    caption("");
     if (state.visible) playSound();
   };
   const updateGuide = (r) => {
@@ -314,12 +359,18 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check) {
     if (state.visible) playSound();
   });
   $("#sound").addEventListener("click", () => {
-    audio.muted = !audio.muted;
-    voice.muted = audio.muted;
-    $("#sound").textContent = audio.muted ? "Sound off" : "Sound on";
-    $("#sound").setAttribute("aria-pressed", String(!audio.muted));
+    if (state.soundBlocked) {
+      // this tap is what the browser was waiting for
+      state.soundBlocked = false;
+      audio.muted = voice.muted = false;
+      nextSpeak = 0;
+      if (state.phase === "story" && state.visible) playSound();
+    } else {
+      audio.muted = !audio.muted;
+      voice.muted = audio.muted;
+    }
+    showSound();
   });
-  $("#sound-fix").addEventListener("click", playSound);
 
   // camera frames go to the marker finder one at a time
   const grab = document.createElement("canvas");
@@ -410,6 +461,7 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check) {
     if (anchor.visible) {
       anchor.matrix.fromArray(poseMatrix(Hshow, vw, vh, f));
       anchor.matrixWorldNeedsUpdate = true;
+      room.position.setFromMatrixColumn(anchor.matrix, 2);   // "above" is out of the paper, however the phone is held
     }
     const inStory = state.phase === "story";
     holder.visible = inStory;
@@ -423,12 +475,18 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check) {
     if (!state.audioOk && state.visible && inStory) t = silentT = Math.min(silentT + dt, clip.duration);
     if (!state.audioOk && !(state.visible && inStory)) t = silentT;
     t = Math.min(t, clip.duration - 0.001);
-    if (inStory) mixer.setTime(t);
+    if (inStory) {
+      mixer.setTime(t);
+      const said = state.visible && captions.find((c) => t >= c.start && t < c.end);
+      if (said) { $("#hint").hidden = true; caption(said.text, said.who); } else caption("");
+    }
     state.time = t;
+    if (anchor.visible) ground.update(glow ? [glow] : [], dt * 1000);
     renderer.render(scene, camera);
   });
   state.H = () => Hshow;
-  if (TEST) { testMeter(audio, "peak"); testMeter(voice, "voicePeak"); }
+  if (TEST) {
+    state.scene = scene; testMeter(audio, "peak"); testMeter(voice, "voicePeak"); }
 }
 
 // test only: is real signal coming out of a sound element?
