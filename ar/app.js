@@ -21,7 +21,6 @@ const FOCAL = 0.8;           // typical phone main camera: focal length as a sha
 const MEASURE_MS = 450;      // how often the colours are read while Kimo waits
 const KIMO_SIZE = 1.5, KIMO_AT = [(33 - PAGE_W / 2) / PAGE_W, (PAGE_H / 2 - 212) / PAGE_W];
 const STANDING = Math.PI / 2;   // a figure's up = straight out of the paper
-const WITH_CAPTIONS = new Set(["01"]);   // pages whose story has P##_captions.json
 const LINES = {
   start: "Let's color this picture first, and then the magic will begin!",
   almost: "Great job! Just a little more color, and the magic will wake up!",
@@ -161,12 +160,10 @@ async function main() {
   }
 
   let captions = [];
-  if (WITH_CAPTIONS.has(id)) {
-    try {
-      captions = (await fetch(`${base}P${id}_captions.json`).then((r) => r.json())).lines;
-    } catch (err) {
-      console.error("captions not available", err);
-    }
+  try {
+    captions = (await fetch(`${base}P${id}_captions.json`).then((r) => r.json())).lines;
+  } catch (err) {
+    console.error("captions not available", err);   // the story still plays
   }
 
   $("#progress").hidden = true;
@@ -225,7 +222,8 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check, captions)
   let glow = null, glowCtx = null;
   if (check) {
     const c = document.createElement("canvas");
-    c.width = check.w; c.height = check.h;
+    const sharp = check.ref ? 3 : 1;   // the halo needs more pixels than the colour map
+    c.width = check.w * sharp; c.height = check.h * sharp;
     glowCtx = c.getContext("2d");
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
@@ -510,7 +508,7 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check, captions)
       kimo.holder.visible = kimoOn;
       if (kimoOn && anchor.visible) kimo.mixer.setTime((now / 1000) % kimo.dur);
     }
-    if (glow && glow.visible) glow.material.opacity = check.ref ? 0.3 + 0.12 * Math.sin(now / 420) : 0.45 + 0.3 * Math.sin(now / 280);
+    if (glow && glow.visible) glow.material.opacity = check.ref ? 0.5 + 0.38 * Math.sin(now / 260) : 0.45 + 0.3 * Math.sin(now / 280);   // a clear pulse, about 1.6 s, so a child's eye goes straight to what is missing
     let t = audio.currentTime;
     if (!state.audioOk && state.visible && inStory) t = silentT = Math.min(silentT + dt, clip.duration);
     if (!state.audioOk && !(state.visible && inStory)) t = silentT;
@@ -518,7 +516,11 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check, captions)
     if (inStory) {
       mixer.setTime(t);
       const said = state.visible && captions.find((c) => t >= c.start && t < c.end);
-      if (said) { $("#hint").hidden = true; caption(said.text, said.who); } else caption("");
+      if (said) {
+        $("#hint").hidden = true;
+        caption(said.text, said.who);
+        if (TEST) { state.said = state.said || []; if (!state.said.includes(said.text)) state.said.push(said.text); }
+      } else caption("");
     }
     state.time = t;
     if (anchor.visible) ground.update(glow ? [glow] : [], dt * 1000);

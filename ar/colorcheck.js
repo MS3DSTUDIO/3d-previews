@@ -86,7 +86,7 @@ export class ColorCheck {
       }
     });
     if (seen < this.ref.length * 0.7) return null;
-    const coverage = coloured / seen, match = coloured ? right / coloured : 0;
+    const coverage = coloured / seen, match = this.any ? 1 : coloured ? right / coloured : 0;   // "any" = the page asks for all your colours: every colour is right
     let tiles = 0, full = 0;
     for (let t = 0; t < tileSeen.length; t++) if (tileSeen[t] >= TILE_MIN) { tiles++; if (tileDone[t] / tileSeen[t] >= TILE_DONE) full++; }
     const tilesDone = tiles ? full / tiles : 0;
@@ -156,7 +156,26 @@ export class ColorCheck {
         const v = parseInt(SHOW[NAMES[c.f]].slice(1), 16);
         img.data[c.i * 4] = v >> 16; img.data[c.i * 4 + 1] = (v >> 8) & 255; img.data[c.i * 4 + 2] = v & 255; img.data[c.i * 4 + 3] = 255;
       });
-      ctx.putImageData(img, 0, 0);
+      // a solid core with a soft halo round it, so even a small missed bit is easy to see. Shrinking and enlarging is the blur: it works on every phone browser.
+      if (!this.small) {
+        this.small = Object.assign(document.createElement("canvas"), { width: this.w, height: this.h });
+        this.halo = Object.assign(document.createElement("canvas"), { width: Math.ceil(this.w / 3), height: Math.ceil(this.h / 3) });
+        this.wide = Object.assign(document.createElement("canvas"), { width: Math.ceil(this.w / 8), height: Math.ceil(this.h / 8) });
+      }
+      this.small.getContext("2d").putImageData(img, 0, 0);
+      const W = ctx.canvas.width, Ht = ctx.canvas.height;
+      for (const c of [this.halo, this.wide]) {
+        const x = c.getContext("2d");
+        x.clearRect(0, 0, c.width, c.height);
+        x.imageSmoothingEnabled = true;
+        x.drawImage(this.small, 0, 0, c.width, c.height);
+      }
+      ctx.clearRect(0, 0, W, Ht);
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(this.wide, 0, 0, W, Ht);
+      ctx.drawImage(this.wide, 0, 0, W, Ht);
+      ctx.drawImage(this.halo, 0, 0, W, Ht);
+      ctx.drawImage(this.small, 0, 0, W, Ht);
       return;
     }
     const c = parseInt(colour.slice(1), 16);
