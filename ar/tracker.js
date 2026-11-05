@@ -70,14 +70,12 @@ export function poseMatrix(H, vw, vh, f) {
   const h1 = col(0), h2 = col(1), h3 = col(2);
   const len = (v) => Math.hypot(v[0], v[1], v[2]);
   const lam = (len(h1) + len(h2)) / 2 * (h3[2] < 0 ? -1 : 1);
+  // The page's own two directions are kept exactly as measured, not squared up into a perfect rotation. Squaring them up is only right if the lens guess is perfect; kept like this,
+  // everything lying on the paper lands exactly where the camera sees the paper, on any phone, from any angle. The lens guess can then only affect how tall things lean, not where they stand.
   const r1 = h1.map((v) => v / lam), r2 = h2.map((v) => v / lam), t = h3.map((v) => v / lam);
   const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
   const norm = (v) => { const l = len(v); return v.map((x) => x / l); };
   const z = norm(cross(r1, r2));
-  const a = norm([r1[0] + r2[0], r1[1] + r2[1], r1[2] + r2[2]]);
-  const b = norm(cross(z, a));
-  const R1 = [(a[0] - b[0]) * Math.SQRT1_2, (a[1] - b[1]) * Math.SQRT1_2, (a[2] - b[2]) * Math.SQRT1_2];
-  const R2 = [(a[0] + b[0]) * Math.SQRT1_2, (a[1] + b[1]) * Math.SQRT1_2, (a[2] + b[2]) * Math.SQRT1_2];
   // camera frame (x right, y down, z ahead) -> three.js frame (x right, y up, z behind)
-  return [R1[0], -R1[1], -R1[2], 0, R2[0], -R2[1], -R2[2], 0, z[0], -z[1], -z[2], 0, t[0], -t[1], -t[2], 1];
+  return [r1[0], -r1[1], -r1[2], 0, r2[0], -r2[1], -r2[2], 0, z[0], -z[1], -z[2], 0, t[0], -t[1], -t[2], 1];
 }
