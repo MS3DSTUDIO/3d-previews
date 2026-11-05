@@ -163,6 +163,117 @@ function robustFit(pts, Hguess) {
   return { H, inliers, spread: Math.min(maxX - minX, (maxY - minY) / 1.3) };
 }
 
+// ---- the printed page itself. The squares only give a first idea of where the page is; with 2 or 3 tiny squares at its edge, that idea can be millimetres off at the far side.
+// So: small pieces of the known print are compared with the camera around where they should be, and the page's pose is taken from all that agree, across the whole page.
+let T0 = null, T1 = null, printPoints = [];
+function setPrint(w, h, d) {
+  T0 = { w, h, d };
+  const w1 = w >> 1, h1 = h >> 1, d1 = new Uint8Array(w1 * h1);
+  for (let y = 0; y < h1; y++) for (let x = 0; x < w1; x++) {
+    const i = 2 * y * w + 2 * x;
+    d1[y * w1 + x] = (d[i] + d[i + 1] + d[i + w] + d[i + w + 1] + 2) >> 2;
+  }
+  T1 = { w: w1, h: h1, d: d1 };
+  // strong corners of the print, spread over the whole page
+  const CW = 46;   // about 170 points: plenty for the fit, and light enough for a phone
+  printPoints = [];
+  for (let r = 0; r < Math.floor(h / CW); r++) for (let c = 0; c < Math.floor(w / CW); c++) {
+    let best = 0, bx = 0, by = 0;
+    for (let y = Math.max(r * CW, 8); y < Math.min((r + 1) * CW, h - 8); y += 2) for (let x = Math.max(c * CW, 8); x < Math.min((c + 1) * CW, w - 8); x += 2) {
+      let a = 0, b = 0, e = 0;
+      for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+        const i = (y + dy) * w + x + dx;
+        const ix = d[i + 1] - d[i - 1], iy = d[i + w] - d[i - w];
+        a += ix * ix; b += ix * iy; e += iy * iy;
+      }
+      const lam = (a + e - Math.sqrt((a - e) * (a - e) + 4 * b * b)) / 2;
+      if (lam > best) { best = lam; bx = x; by = y; }
+    }
+    if (best > 6000) printPoints.push({ px: bx / w - 0.5, py: HH - by / w });
+  }
+}
+const PR = 6, PN = (2 * PR + 1) * (2 * PR + 1), tp = new Float32Array(PN);
+function sampleT(T, x, y) {
+  if (x < 0 || y < 0 || x >= T.w - 1 || y >= T.h - 1) return 255;
+  const x0 = x | 0, y0 = y | 0, fx = x - x0, fy = y - y0, i = y0 * T.w + x0, d = T.d;
+  return (1 - fy) * ((1 - fx) * d[i] + fx * d[i + 1]) + fy * ((1 - fx) * d[i + T.w] + fx * d[i + T.w + 1]);
+}
+// the piece of print around a point, as the camera should see it now; returns false if it is too plain to compare
+function printPatch(T, HI, cx, cy, scale) {
+  let k = 0, sum = 0, sq = 0;
+  for (let dy = -PR; dy <= PR; dy++) for (let dx = -PR; dx <= PR; dx++, k++) {
+    const q = project(HI, (cx + dx) * scale, (cy + dy) * scale);
+    const v = sampleT(T, (q[0] + 0.5) * T.w, (HH - q[1]) * T.w);
+    tp[k] = v; sum += v; sq += v * v;
+  }
+  const mean = sum / PN, norm = Math.sqrt(Math.max(sq - PN * mean * mean, 0));
+  if (norm < 150) return false;
+  for (k = 0; k < PN; k++) tp[k] = (tp[k] - mean) / norm;
+  return true;
+}
+// similarity of the prepared piece with the camera at one place, -1..1
+function ncc(im, cx, cy) {
+  const d = im.d, W = im.w;
+  let sum = 0, sq = 0, dot = 0, k = 0;
+  for (let dy = -PR; dy <= PR; dy++) {
+    let i = (cy + dy) * W + cx - PR;
+    for (let dx = -PR; dx <= PR; dx++, k++, i++) {
+      const v = d[i];
+      sum += v; sq += v * v; dot += v * tp[k];
+    }
+  }
+  const norm = Math.sqrt(Math.max(sq - (sum * sum) / PN, 1));
+  return dot / norm;
+}
+function matchPrint(pyr, H, R) {
+  const HI = invert(H);
+  if (!HI) return [];
+  const out = [], L0 = pyr[0], L1 = pyr[1], M = PR + 3;
+  for (const pt of printPoints) {
+    const q = project(H, pt.px, pt.py);
+    let x1 = Math.round(q[0] / 4), y1 = Math.round(q[1] / 4);
+    if (x1 < M + R || y1 < M + R || x1 >= L1.w - M - R || y1 >= L1.h - M - R) continue;
+    // coarse: half-size camera picture, wide search
+    if (!printPatch(T1, HI, x1, y1, 4)) continue;
+    let best = -2, bx = x1, by = y1;
+    for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+      const s = ncc(L1, x1 + dx, y1 + dy);
+      if (s > best) { best = s; bx = x1 + dx; by = y1 + dy; }
+    }
+    if (best < 0.35) continue;
+    // fine: the same piece at full tracking size, around the coarse answer. The piece is taken at the expected place and moved, which is exact enough over this small shift.
+    const ex = q[0] / 2, ey = q[1] / 2;
+    const ix = Math.round(ex), iy = Math.round(ey);
+    if (!printPatch(T0, HI, ix, iy, 2)) continue;
+    const sx = 2 * bx + (ix - 2 * x1), sy = 2 * by + (iy - 2 * y1);
+    if (sx < M + 3 || sy < M + 3 || sx >= L0.w - M - 3 || sy >= L0.h - M - 3) continue;
+    let fine = -2, fx = sx, fy = sy;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const s = ncc(L0, sx + dx, sy + dy);
+      if (s > fine) { fine = s; fx = sx + dx; fy = sy + dy; }
+    }
+    if (fine < 0.45) continue;
+    // between the pixels
+    const c = fine, l = ncc(L0, fx - 1, fy), r = ncc(L0, fx + 1, fy), u = ncc(L0, fx, fy - 1), b = ncc(L0, fx, fy + 1);
+    const ax = l + r - 2 * c, ay = u + b - 2 * c;
+    const subx = ax < -1e-6 ? Math.max(-0.5, Math.min(0.5, (l - r) / (2 * ax))) : 0, suby = ay < -1e-6 ? Math.max(-0.5, Math.min(0.5, (u - b) / (2 * ay))) : 0;
+    out.push({ px: pt.px, py: pt.py, x: fx + subx + (ex - ix), y: fy + suby + (ey - iy), bad: 0 });
+  }
+  return out;
+}
+// from a rough pose to the true one: wide search, then narrower; null if the print cannot be found (a very curled page, say)
+function alignToPrint(pyr, H, passes) {
+  let cur = H, res = null;
+  for (const R of passes) {
+    const m = matchPrint(pyr, cur, R);
+    const fit = robustFit(m, cur);
+    if (!fit || fit.inliers < 24 || fit.spread < 0.4 || fit.inliers < m.length * 0.3) return res;
+    cur = fit.H;
+    res = { H: cur, inliers: fit.inliers };
+  }
+  return res;
+}
+
 // ---- markers
 function detectAll(rgba, w, h) {
   const found = detector.detect({ width: w, height: h, data: rgba instanceof Uint8ClampedArray ? rgba : new Uint8ClampedArray(rgba.buffer) });
@@ -192,13 +303,20 @@ function detectNear(rgba, w, h, H, page) {
 }
 
 // ---- the tracker
-let prevPyr = null, spare = null, points = [], Hcur = null, tracking = false, frame = 0, confirm = 0, lastTracked = -999, seedMarkers = 0, velocity = [0, 0], shaken = false;
+let state_off = 0;
+let prevPyr = null, spare = null, points = [], Hcur = null, tracking = false, frame = 0, confirm = 0, lastTracked = -999, seedMarkers = 0, velocity = [0, 0], shaken = false, aligned = false, lastAlign = -999;
 
 function seed(H, pyr, count) {
   Hcur = H;
   tracking = true;
   seedMarkers = count;
   velocity = [0, 0];
+  if (T0) {
+    const a = alignToPrint(pyr, H, [14, 5, 2]);
+    aligned = !!a;
+    lastAlign = frame;
+    if (a) Hcur = H = a.H;
+  }
   points = findPoints(pyr[0], H, []).slice(0, MAX_POINTS);
   if (points.length < MIN_INLIERS) { tracking = false; points = []; }
 }
@@ -236,8 +354,28 @@ function step(rgba, w, h, page) {
       if (points.length < MIN_POINTS || frame % 20 === 0) {
         if (points.length < MAX_POINTS) points = points.concat(findPoints(pyr[0], H, points).slice(0, MAX_POINTS - points.length));
       }
-      // now and then the markers check that the drawing's points have not slowly slid
-      if (frame % CHECK_EVERY === 0) {
+      if (T0 && frame - lastAlign >= (aligned ? 45 : 6)) {
+        // now and then the print itself says where the page truly is
+        lastAlign = frame;
+        const a = alignToPrint(pyr, H, aligned ? [3, 2] : [14, 5, 2]);
+        if (a) {
+          let off = 0;
+          for (const q of [[-0.45, 0.6], [0.45, 0.6], [0.45, -0.6], [-0.45, -0.6]]) {
+            const p1 = project(H, q[0], q[1]), p2 = project(a.H, q[0], q[1]);
+            off += Math.hypot(p1[0] - p2[0], p1[1] - p2[1]) / 4;
+          }
+          state_off = off;
+          aligned = true;
+          // the followed points move their idea of where they are on the page, so the correction arrives softly, except for a real error, which is put right at once
+          const HI = invert(a.H), k = off > 6 ? 1 : 0.3;
+          if (HI) for (const p of points) {
+            const q = project(HI, p.x * 2, p.y * 2);
+            p.px += k * (q[0] - p.px); p.py += k * (q[1] - p.py);
+          }
+          if (off > 6) H = Hcur = a.H;
+        }
+      } else if (!T0 && frame % CHECK_EVERY === 0) {
+        // no picture of the print: the markers check that the drawing's points have not slowly slid
         const list = detectNear(rgba, w, h, H, page);
         markerCount = list.length;
         const r = list.length >= 2 ? fitPage(list) : null;
@@ -284,17 +422,18 @@ function step(rgba, w, h, page) {
       // first sight: two frames in a row, so a chance look-alike in a picture can never start anything
       if (confirm >= 2 || frame - lastTracked < 45) {
         seed(r.H, pyr, r.used);
-        if (tracking) { H = r.H; lastTracked = frame; }
+        if (tracking) { H = Hcur; lastTracked = frame; }
       }
     } else confirm = 0;
   } else confirm = 0;
 
   spare = prevPyr;
   prevPyr = pyr;
-  return { H, inliers, others, markers: markerCount, points: points.length };
+  return { H, inliers, others, markers: markerCount, points: points.length, aligned: aligned || !T0, off: state_off };
 }
 
 self.onmessage = (e) => {
+  if (e.data.print) { setPrint(e.data.print.w, e.data.print.h, new Uint8Array(e.data.print.buf)); return; }
   const { buf, w, h, t, page } = e.data;
   const t0 = performance.now();
   const r = step(new Uint8ClampedArray(buf), w, h, page);

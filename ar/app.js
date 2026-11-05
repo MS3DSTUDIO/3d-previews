@@ -391,7 +391,22 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check, captions)
   shown.width = vw; shown.height = vh;
   const showCtx = shown.getContext("2d", { alpha: false });
   const worker = new Worker("../tracker_worker.js");
-  let busy = false, Hraw = null, Hshow = null, lastSeen = 0, otherPage = 0, otherCount = 0, misses = 0, lastVideoTime = -1, lastDraw = 0;
+  // the tracker compares the camera with the printed page; if this picture cannot load, it still works from the corner squares alone
+  try {
+    const pic = new Image();
+    pic.src = `${base}P${id}_print.png`;
+    await pic.decode();
+    const c = document.createElement("canvas");
+    c.width = pic.naturalWidth; c.height = pic.naturalHeight;
+    const cx = c.getContext("2d", { willReadFrequently: true });
+    cx.drawImage(pic, 0, 0);
+    const rgba = cx.getImageData(0, 0, c.width, c.height).data, g = new Uint8Array(c.width * c.height);
+    for (let i = 0; i < g.length; i++) g[i] = rgba[i * 4];
+    worker.postMessage({ print: { w: c.width, h: c.height, buf: g.buffer } }, [g.buffer]);
+  } catch (err) {
+    console.error("printed page picture not available", err);
+  }
+  let busy = false, Hraw = null, Hshow = null, lastSeen = 0, otherPage = 0, otherCount = 0, misses = 0, lastVideoTime = -1, lastDraw = 0, foundAt = 0;
   const lens = [];
   const filter = new PageFilter();
   const mine = Number(id);
@@ -444,13 +459,15 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check, captions)
       Hraw = H;
       lastSeen = now;
       Hshow = filter.apply(H, now);
-      if (!state.visible) onFound();
+      if (!state.visible) { foundAt = now; onFound(); }
       otherCount = 0;
-      learnLens(H);
+      if (e.data.aligned) learnLens(H);
       showCtx.drawImage(grab, 0, 0);
       shown.hidden = false;
-      // the frame the page was measured in is still on the canvas: read the colours from it
-      if ((state.phase === "check" || state.phase === "guide") && now - lastMeasure > MEASURE_MS) {
+      state.aligned = e.data.aligned;
+      state.off = e.data.off;
+      // the frame the page was measured in is still on the canvas: read the colours from it, but only once the page's place is exact (or after 3 s, so nobody waits for ever)
+      if (e.data.aligned || now - foundAt > 3000) if ((state.phase === "check" || state.phase === "guide") && now - lastMeasure > MEASURE_MS) {
         lastMeasure = now;
         const r = check.measure(gx.getImageData(0, 0, vw, vh), H);
         if (r) judge(r);
