@@ -70,8 +70,8 @@
    "appliances": [],
    "panos": {
     "floor-main__doors-closed": {
-     "full": "pano_piano.jpg",
-     "mobile": "pano_piano_m.jpg"
+     "full": "pano_piano.jpg?v=5",
+     "mobile": "pano_piano_m.jpg?v=5"
     }
    },
    "photos": [
@@ -106,6 +106,12 @@
      "label": "White Console"
     },
     {
+     "still": "11_ConsoleStools",
+     "yaw": 180.0,
+     "pitch": -43.2,
+     "label": "White Console & Stools"
+    },
+    {
      "still": "07_OsloConsole",
      "yaw": 58.1,
      "pitch": -8.8,
@@ -116,6 +122,12 @@
      "yaw": 43.1,
      "pitch": 0.6,
      "label": "Bar"
+    },
+    {
+     "still": "08B_BarSink",
+     "yaw": 42.0,
+     "pitch": -4.4,
+     "label": "Bar Sink & Art"
     },
     {
      "still": "09_BarCart",
@@ -184,8 +196,8 @@
    "appliances": [],
    "panos": {
     "floor-main__doors-closed": {
-     "full": "pano_fireplace.jpg",
-     "mobile": "pano_fireplace_m.jpg"
+     "full": "pano_fireplace.jpg?v=5",
+     "mobile": "pano_fireplace_m.jpg?v=5"
     }
    },
    "photos": [
@@ -220,6 +232,12 @@
      "label": "White Console"
     },
     {
+     "still": "11_ConsoleStools",
+     "yaw": -107.7,
+     "pitch": -16.1,
+     "label": "White Console & Stools"
+    },
+    {
      "still": "07_OsloConsole",
      "yaw": -23.1,
      "pitch": -15.0,
@@ -230,6 +248,12 @@
      "yaw": 6.2,
      "pitch": 0.8,
      "label": "Bar"
+    },
+    {
+     "still": "08B_BarSink",
+     "yaw": 6.6,
+     "pitch": -5.9,
+     "label": "Bar Sink & Art"
     },
     {
      "still": "09_BarCart",
@@ -251,8 +275,8 @@
    "id": "day_01_West",
    "time": "day",
    "caption": "West View",
-   "src": "still_01_West.jpg",
-   "thumb": "thumb_01_West.jpg",
+   "src": "still_01_West.jpg?v=5",
+   "thumb": "thumb_01_West.jpg?v=5",
    "w": 1920,
    "h": 1080,
    "version": "orig",
@@ -262,8 +286,8 @@
    "id": "day_02_Fireplace",
    "time": "day",
    "caption": "Fireplace Wall",
-   "src": "still_02_Fireplace.jpg",
-   "thumb": "thumb_02_Fireplace.jpg",
+   "src": "still_02_Fireplace.jpg?v=5",
+   "thumb": "thumb_02_Fireplace.jpg?v=5",
    "w": 1920,
    "h": 1080,
    "version": "orig",
@@ -273,8 +297,8 @@
    "id": "day_03_North",
    "time": "day",
    "caption": "North View",
-   "src": "still_03_North.jpg",
-   "thumb": "thumb_03_North.jpg",
+   "src": "still_03_North.jpg?v=5",
+   "thumb": "thumb_03_North.jpg?v=5",
    "w": 1920,
    "h": 1080,
    "version": "orig",
@@ -284,8 +308,8 @@
    "id": "day_05_Fireplace_Close",
    "time": "day",
    "caption": "Fireplace Close-up",
-   "src": "still_05_Fireplace_Close.jpg",
-   "thumb": "thumb_05_Fireplace_Close.jpg",
+   "src": "still_05_Fireplace_Close.jpg?v=5",
+   "thumb": "thumb_05_Fireplace_Close.jpg?v=5",
    "w": 1920,
    "h": 1080,
    "version": "orig",
@@ -295,19 +319,30 @@
    "id": "day_06_WhiteConsole",
    "time": "day",
    "caption": "White Console",
-   "src": "still_06_WhiteConsole.jpg",
-   "thumb": "thumb_06_WhiteConsole.jpg",
+   "src": "still_06_WhiteConsole.jpg?v=5",
+   "thumb": "thumb_06_WhiteConsole.jpg?v=5",
    "w": 1920,
    "h": 1080,
    "version": "orig",
    "cam": "06_WhiteConsole"
   },
   {
+   "id": "day_11_ConsoleStools",
+   "time": "day",
+   "caption": "White Console & Stools",
+   "src": "still_11_ConsoleStools.jpg?v=5",
+   "thumb": "thumb_11_ConsoleStools.jpg?v=5",
+   "w": 1920,
+   "h": 1080,
+   "version": "orig",
+   "cam": "11_ConsoleStools"
+  },
+  {
    "id": "day_07_OsloConsole",
    "time": "day",
    "caption": "Oslo Console",
-   "src": "still_07_OsloConsole.jpg",
-   "thumb": "thumb_07_OsloConsole.jpg",
+   "src": "still_07_OsloConsole.jpg?v=5",
+   "thumb": "thumb_07_OsloConsole.jpg?v=5",
    "w": 1920,
    "h": 1080,
    "version": "orig",
@@ -317,19 +352,30 @@
    "id": "day_08_Bar",
    "time": "day",
    "caption": "Bar",
-   "src": "still_08_Bar.jpg",
-   "thumb": "thumb_08_Bar.jpg",
+   "src": "still_08_Bar.jpg?v=5",
+   "thumb": "thumb_08_Bar.jpg?v=5",
    "w": 1920,
    "h": 1080,
    "version": "orig",
    "cam": "08_Bar"
   },
   {
+   "id": "day_08B_BarSink",
+   "time": "day",
+   "caption": "Bar Sink & Art",
+   "src": "still_08B_BarSink.jpg?v=5",
+   "thumb": "thumb_08B_BarSink.jpg?v=5",
+   "w": 1920,
+   "h": 1080,
+   "version": "orig",
+   "cam": "08B_BarSink"
+  },
+  {
    "id": "day_09_BarCart",
    "time": "day",
    "caption": "Bar Cart",
-   "src": "still_09_BarCart.jpg",
-   "thumb": "thumb_09_BarCart.jpg",
+   "src": "still_09_BarCart.jpg?v=5",
+   "thumb": "thumb_09_BarCart.jpg?v=5",
    "w": 1920,
    "h": 1080,
    "version": "orig",
@@ -339,8 +385,8 @@
    "id": "day_10_Piano",
    "time": "day",
    "caption": "Piano Corner",
-   "src": "still_10_Piano.jpg",
-   "thumb": "thumb_10_Piano.jpg",
+   "src": "still_10_Piano.jpg?v=5",
+   "thumb": "thumb_10_Piano.jpg?v=5",
    "w": 1920,
    "h": 1080,
    "version": "orig",

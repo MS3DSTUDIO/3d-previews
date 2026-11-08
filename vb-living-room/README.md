@@ -18,3 +18,7 @@ Live: https://ms3dstudio.github.io/3d-previews/vb-living-room/
 Both panoramas face north at the centre (yaw 0 = north wall, 90 = east windows, 180 = south).
 Adjust (top right) changes brightness and contrast of the 360 and the photos. A link can carry a setting, for example `?b=115&c=105`.
 To replace a panorama with a colour-graded version, overwrite both of its files with the same names.
+
+## Updates
+
+- 11/09: raised hearth and new fireplace styling (both 360s re-rendered), new photos 11 (white console with stools) and 08B (bar sink and art).
