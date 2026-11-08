@@ -145,8 +145,8 @@
   .gal-thumbs img{width:100%;height:100%;object-fit:cover;display:block}
 
 
-  /* ---------- brightness / contrast ---------- */
-  #pano canvas,#galImg{filter:brightness(var(--bri,1)) contrast(var(--con,1))}
+  /* ---------- brightness / contrast / clarity / texture (SVG filter #adjF, only while something is changed) ---------- */
+  html.adj-on #pano canvas,html.adj-on #galImg{filter:url(#adjF)}
   .adjust{position:fixed;top:64px;right:20px;z-index:7;width:290px;display:flex;flex-direction:column;gap:12px;
           background:var(--green-90);border:1px solid var(--line);border-radius:14px;padding:14px 16px 12px;
           backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 10px 30px rgba(0,0,0,.35);
@@ -201,11 +201,11 @@
 </section>
 
 <div class="title ui"><h2>Virginia Beach</h2><p id="subtitle">Living Room · 360° tour</p></div>
-<div class="hint ui" id="hint">Drag to look around · circles move you · camera icons show photos · Adjust (top right) sets brightness and contrast</div>
+<div class="hint ui" id="hint">Drag to look around · circles move you · camera icons show photos · Adjust (top right) sets brightness, contrast, clarity and texture</div>
 <div class="loc-name" id="locname"></div>
 
 <div class="topbtns ui">
-  <button class="chip" id="btnAdjust" type="button" aria-label="Brightness and contrast" aria-expanded="false" aria-controls="adjust">
+  <button class="chip" id="btnAdjust" type="button" aria-label="Brightness, contrast, clarity and texture" aria-expanded="false" aria-controls="adjust">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/><path d="M12 4.5v15" /><path d="M12 4.5a7.5 7.5 0 0 1 0 15z" fill="currentColor" stroke="none"/></svg><b>Adjust</b></button>
   <button class="chip" id="btnGallery" type="button" aria-label="Photo gallery">
     <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M4 18l5-5 4 4 3-3 4 4"/></svg><b>Photos</b></button>
@@ -213,11 +213,16 @@
     <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
 </div>
 
-<div class="adjust ui" id="adjust" role="dialog" aria-label="Brightness and contrast">
-  <div class="adj-row"><label for="rBri">Brightness</label><input type="range" id="rBri" min="50" max="160" step="1" value="100"><output id="oBri" for="rBri">100%</output></div>
-  <div class="adj-row"><label for="rCon">Contrast</label><input type="range" id="rCon" min="50" max="160" step="1" value="100"><output id="oCon" for="rCon">100%</output></div>
+<div class="adjust ui" id="adjust" role="dialog" aria-label="Brightness, contrast, clarity and texture">
+  <div class="adj-row"><label for="rBri">Brightness</label><input type="range" id="rBri" min="-50" max="100" step="1" value="0"><output id="oBri" for="rBri">0</output></div>
+  <div class="adj-row"><label for="rCon">Contrast</label><input type="range" id="rCon" min="-50" max="100" step="1" value="0"><output id="oCon" for="rCon">0</output></div>
+  <div class="adj-row"><label for="rCla">Clarity</label><input type="range" id="rCla" min="0" max="100" step="1" value="0"><output id="oCla" for="rCla">0</output></div>
+  <div class="adj-row"><label for="rTex">Texture</label><input type="range" id="rTex" min="0" max="100" step="1" value="0"><output id="oTex" for="rTex">0</output></div>
   <div class="adj-foot"><button class="adj-reset" id="adjReset" type="button">Reset</button></div>
 </div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <filter id="adjF" color-interpolation-filters="sRGB" x="0" y="0" width="100%" height="100%"></filter>
+</svg>
 
 <nav class="panel ui" aria-label="Tour controls">
   <div class="row"><span class="lbl">Location</span><div class="seg" id="segNode"></div></div>
@@ -418,33 +423,68 @@
 
   $('btnFull').onclick = ()=>{ document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); };
 
-  // ---------- brightness / contrast ----------
-  // CSS filters on the 360 canvas and the gallery photo; values persist per viewer and can be shared as ?b=110&c=105
-  const adj=$('adjust'), rB=$('rBri'), rC=$('rCon');
+  // ---------- brightness / contrast / clarity / texture ----------
+  // One SVG filter on the 360 canvas and the gallery photo.
+  //  Brightness: midtone lift with fixed black and white points, so the room brightens while windows and highlights never clip.
+  //  Contrast:   S-curve around mid-grey, also with fixed end points.
+  //  Clarity:    local contrast (large-radius unsharp mask).  Texture: fine detail (small-radius unsharp mask).
+  // Values persist per viewer and can be shared as ?br=30&ct=10&cl=40&tx=30
+  const adj=$('adjust'), rB=$('rBri'), rC=$('rCon'), rL=$('rCla'), rX=$('rTex'), FLT=$('adjF');
+  const RNG=[rB,rC,rL,rX];
   const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
+  const fmt=(v,signed)=>signed&&v>0?'+'+v:(v<0?'−'+(-v):''+v);
+  function toneCurve(x,b,c){
+    const a=0.0024*b;                       // -0.12 .. +0.24, monotonic because |a| < 1/pi
+    let y=x+a*Math.sin(Math.PI*x);
+    const k=0.008*c;                        // mid-grey slope 1+k, end slopes 1-k
+    y=y-k*Math.sin(2*Math.PI*y)/(2*Math.PI);
+    return clamp(y,0,1);
+  }
+  function buildFilter(b,c,cl,tx){
+    let tv=[]; for(let i=0;i<=32;i++) tv.push(toneCurve(i/32,b,c).toFixed(4)); tv=tv.join(' ');
+    let h=`<feComponentTransfer in="SourceGraphic" result="t"><feFuncR type="table" tableValues="${tv}"/><feFuncG type="table" tableValues="${tv}"/><feFuncB type="table" tableValues="${tv}"/></feComponentTransfer>`;
+    let last='t';
+    if(cl>0){ const a=0.007*cl, sd=Math.max(8,Math.round(Math.min(innerWidth,1800)*0.011));
+      // local contrast, faded out in the highlights (luminance mask) so windows and lamp shades keep their detail
+      h+=`<feGaussianBlur in="${last}" stdDeviation="${sd}" edgeMode="duplicate" result="cb"/>`+
+         `<feComposite in="${last}" in2="cb" operator="arithmetic" k1="0" k2="${(1+a).toFixed(3)}" k3="${(-a).toFixed(3)}" k4="0" result="cr"/>`+
+         `<feColorMatrix in="${last}" type="luminanceToAlpha" result="lum"/>`+
+         `<feComponentTransfer in="lum" result="m"><feFuncA type="table" tableValues="0.85 1 1 0.9 0.55 0.15 0"/></feComponentTransfer>`+
+         `<feComposite in="cr" in2="m" operator="in" result="cA"/><feComposite in="${last}" in2="m" operator="out" result="cB"/>`+
+         `<feComposite in="cA" in2="cB" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="c"/>`; last='c'; }
+    if(tx>0){ const a=0.012*tx;
+      h+=`<feGaussianBlur in="${last}" stdDeviation="1.1" edgeMode="duplicate" result="xb"/><feComposite in="${last}" in2="xb" operator="arithmetic" k1="0" k2="${(1+a).toFixed(3)}" k3="${(-a).toFixed(3)}" k4="0" result="x"/>`; last='x'; }
+    FLT.innerHTML=h;
+  }
   let saved={};
-  try { saved=JSON.parse(localStorage.getItem('vbLivingAdjust')||'{}')||{}; } catch(e){ saved={}; }
-  const qb=parseFloat(qs.get('b')), qc=parseFloat(qs.get('c'));
+  try { saved=JSON.parse(localStorage.getItem('vbLivingAdjust2')||'{}')||{}; } catch(e){ saved={}; }
+  const qn=k=>{ const v=parseFloat(qs.get(k)); return isFinite(v)?v:null; };
+  // old links used ?b=115&c=105 (100 = neutral)
+  const legacyB=qn('b'), legacyC=qn('c');
+  const init={br: qn('br') ?? (legacyB!==null?legacyB-100:null) ?? saved.br ?? 0,
+              ct: qn('ct') ?? (legacyC!==null?legacyC-100:null) ?? saved.ct ?? 0,
+              cl: qn('cl') ?? saved.cl ?? 0, tx: qn('tx') ?? saved.tx ?? 0};
   function applyAdj(store){
-    const b=+rB.value, c=+rC.value;
-    document.documentElement.style.setProperty('--bri', (b/100).toFixed(3));
-    document.documentElement.style.setProperty('--con', (c/100).toFixed(3));
-    $('oBri').textContent=b+'%'; $('oCon').textContent=c+'%';
-    for (const r of [rB,rC]) r.style.setProperty('--fill', ((r.value-r.min)/(r.max-r.min)*100)+'%');
+    const b=+rB.value, c=+rC.value, cl=+rL.value, tx=+rX.value;
+    const on=!(b===0&&c===0&&cl===0&&tx===0);
+    if(on) buildFilter(b,c,cl,tx);
+    document.documentElement.classList.toggle('adj-on',on);
+    $('oBri').textContent=fmt(b,true); $('oCon').textContent=fmt(c,true); $('oCla').textContent=fmt(cl); $('oTex').textContent=fmt(tx);
+    for (const r of RNG) r.style.setProperty('--fill', ((r.value-r.min)/(r.max-r.min)*100)+'%');
     if(store){
-      try { localStorage.setItem('vbLivingAdjust', JSON.stringify({b,c})); } catch(e){}
+      try { localStorage.setItem('vbLivingAdjust2', JSON.stringify({br:b,ct:c,cl,tx})); } catch(e){}
       const q=new URLSearchParams(location.search);
-      if(b!==100) q.set('b',b); else q.delete('b');
-      if(c!==100) q.set('c',c); else q.delete('c');
+      q.delete('b'); q.delete('c');
+      for (const [k,v] of [['br',b],['ct',c],['cl',cl],['tx',tx]]) { if(v!==0) q.set(k,v); else q.delete(k); }
       const qsStr=q.toString();
       history.replaceState(null,'',location.pathname+(qsStr?'?'+qsStr:'')+location.hash);
     }
   }
-  rB.value=clamp(isFinite(qb)?qb:(saved.b||100),50,160);
-  rC.value=clamp(isFinite(qc)?qc:(saved.c||100),50,160);
+  rB.value=clamp(init.br,-50,100); rC.value=clamp(init.ct,-50,100); rL.value=clamp(init.cl,0,100); rX.value=clamp(init.tx,0,100);
   applyAdj(false);
-  rB.oninput=rC.oninput=()=>applyAdj(true);
-  $('adjReset').onclick=()=>{ rB.value=100; rC.value=100; applyAdj(true); };
+  for (const r of RNG) r.oninput=()=>applyAdj(true);
+  addEventListener('resize',()=>{ if(+rL.value>0) applyAdj(false); });
+  $('adjReset').onclick=()=>{ for (const r of RNG) r.value=0; applyAdj(true); };
   function toggleAdj(open){
     const on = open===undefined ? !adj.classList.contains('open') : open;
     adj.classList.toggle('open',on); $('btnAdjust').classList.toggle('on',on); $('btnAdjust').setAttribute('aria-expanded',on);
