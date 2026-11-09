@@ -21,8 +21,8 @@
    "id": "piano",
    "label": "Piano Side",
    "view": {
-    "yaw": 83.4,
-    "pitch": -18.6,
+    "yaw": 76.2,
+    "pitch": -17.4,
     "hfov": 104
    },
    "views": [
@@ -30,32 +30,40 @@
      "id": "piano",
      "label": "Piano & art",
      "short": "Piano",
-     "yaw": -28.9,
-     "pitch": -7.7,
+     "yaw": 3.6,
+     "pitch": -4.9,
      "hfov": 102
+    },
+    {
+     "id": "console",
+     "label": "White console & stools",
+     "short": "Console",
+     "yaw": 76.2,
+     "pitch": -17.4,
+     "hfov": 104
     },
     {
      "id": "seating",
      "label": "Seating area",
      "short": "Seating",
-     "yaw": 83.4,
-     "pitch": -18.6,
+     "yaw": 65.9,
+     "pitch": -12.0,
      "hfov": 104
     },
     {
      "id": "fireplace",
      "label": "Fireplace",
      "short": "Fireplace",
-     "yaw": 121.5,
-     "pitch": -3.3,
+     "yaw": 101.9,
+     "pitch": -2.9,
      "hfov": 92
     },
     {
      "id": "bar",
      "label": "Bar",
      "short": "Bar",
-     "yaw": 45.7,
-     "pitch": -0.5,
+     "yaw": 44.4,
+     "pitch": -0.4,
      "hfov": 92
     }
    ],
@@ -63,82 +71,88 @@
     {
      "to": "fireplace",
      "label": "Go to Fireplace Side",
-     "yaw": 90.3,
-     "pitch": -21.6
+     "yaw": 73.6,
+     "pitch": -15.8
     }
    ],
    "appliances": [],
    "panos": {
     "floor-main__doors-closed": {
-     "full": "pano_piano.jpg?v=5",
-     "mobile": "pano_piano_m.jpg?v=5"
+     "full": "pano_piano.jpg?v=6",
+     "mobile": "pano_piano_m.jpg?v=6"
     }
    },
    "photos": [
     {
      "still": "01_West",
-     "yaw": 148.5,
-     "pitch": -29.1,
+     "yaw": 82.0,
+     "pitch": -21.2,
      "label": "West View"
     },
     {
      "still": "02_Fireplace",
-     "yaw": 121.4,
-     "pitch": -8.2,
+     "yaw": 101.8,
+     "pitch": -7.3,
      "label": "Fireplace Wall"
     },
     {
      "still": "03_North",
-     "yaw": 39.4,
-     "pitch": -1.9,
+     "yaw": 29.7,
+     "pitch": 8.5,
      "label": "North View"
     },
     {
      "still": "05_Fireplace_Close",
-     "yaw": 118.8,
-     "pitch": 1.1,
+     "yaw": 99.2,
+     "pitch": 1.0,
      "label": "Fireplace Close-up"
     },
     {
      "still": "06_WhiteConsole",
-     "yaw": -173.7,
-     "pitch": -23.8,
+     "yaw": 76.2,
+     "pitch": -24.4,
      "label": "White Console"
     },
     {
      "still": "11_ConsoleStools",
-     "yaw": 180.0,
-     "pitch": -43.2,
+     "yaw": 77.6,
+     "pitch": -40.9,
      "label": "White Console & Stools"
     },
     {
      "still": "07_OsloConsole",
-     "yaw": 58.1,
-     "pitch": -8.8,
+     "yaw": 51.8,
+     "pitch": -10.4,
      "label": "Oslo Console"
     },
     {
      "still": "08_Bar",
-     "yaw": 43.1,
-     "pitch": 0.6,
+     "yaw": 42.5,
+     "pitch": 0.5,
      "label": "Bar"
     },
     {
      "still": "08B_BarSink",
-     "yaw": 42.0,
-     "pitch": -4.4,
+     "yaw": 53.5,
+     "pitch": -2.9,
      "label": "Bar Sink & Art"
     },
     {
+     "still": "08C_BarFull",
+     "yaw": 48.9,
+     "pitch": 8.8,
+     "label": "Full Bar View"
+    },
+    {
      "still": "09_BarCart",
-     "yaw": 64.0,
-     "pitch": -10.8,
+     "yaw": 57.8,
+     "pitch": -8.1,
      "label": "Bar Cart"
     },
     {
      "still": "10_Piano",
-     "yaw": -27.3,
-     "pitch": 1.1,
+     "yaw": 1.4,
+     "pitch": 0.7,
      "label": "Piano Corner"
     }
    ]
@@ -189,15 +203,15 @@
     {
      "to": "piano",
      "label": "Go to Piano Side",
-     "yaw": -89.7,
-     "pitch": -21.6
+     "yaw": -106.4,
+     "pitch": -15.8
     }
    ],
    "appliances": [],
    "panos": {
     "floor-main__doors-closed": {
-     "full": "pano_fireplace.jpg?v=5",
-     "mobile": "pano_fireplace_m.jpg?v=5"
+     "full": "pano_fireplace.jpg?v=6",
+     "mobile": "pano_fireplace_m.jpg?v=6"
     }
    },
    "photos": [
@@ -215,8 +229,8 @@
     },
     {
      "still": "03_North",
-     "yaw": -24.7,
-     "pitch": -2.2,
+     "yaw": -42.6,
+     "pitch": 11.0,
      "label": "North View"
     },
     {
@@ -240,7 +254,7 @@
     {
      "still": "07_OsloConsole",
      "yaw": -23.1,
-     "pitch": -15.0,
+     "pitch": -26.1,
      "label": "Oslo Console"
     },
     {
@@ -251,9 +265,15 @@
     },
     {
      "still": "08B_BarSink",
-     "yaw": 6.6,
-     "pitch": -5.9,
+     "yaw": 21.8,
+     "pitch": -6.6,
      "label": "Bar Sink & Art"
+    },
+    {
+     "still": "08C_BarFull",
+     "yaw": 15.1,
+     "pitch": 17.4,
+     "label": "Full Bar View"
     },
     {
      "still": "09_BarCart",
@@ -275,8 +295,8 @@
    "id": "day_01_West",
    "time": "day",
    "caption": "West View",
-   "src": "still_01_West.jpg?v=5",
-   "thumb": "thumb_01_West.jpg?v=5",
+   "src": "still_01_West.jpg?v=6",
+   "thumb": "thumb_01_West.jpg?v=6",
    "w": 1920,
    "h": 1080,
    "version": "orig",
@@ -286,8 +306,8 @@
    "id": "day_02_Fireplace",
    "time": "day",
    "caption": "Fireplace Wall",
-   "src": "still_02_Fireplace.jpg?v=5",
-   "thumb": "thumb_02_Fireplace.jpg?v=5",
+   "src": "still_02_Fireplace.jpg?v=6",
+   "thumb": "thumb_02_Fireplace.jpg?v=6",
    "w": 1920,
    "h": 1080,
    "version": "orig",
@@ -297,8 +317,8 @@
    "id": "day_03_North",
    "time": "day",
    "caption": "North View",
-   "src": "still_03_North.jpg?v=5",
-   "thumb": "thumb_03_North.jpg?v=5",
+   "src": "still_03_North.jpg?v=6",
+   "thumb": "thumb_03_North.jpg?v=6",
    "w": 1920,
    "h": 1080,
    "version": "orig",
@@ -308,8 +328,8 @@
    "id": "day_05_Fireplace_Close",
    "time": "day",
    "caption": "Fireplace Close-up",
-   "src": "still_05_Fireplace_Close.jpg?v=5",
-   "thumb": "thumb_05_Fireplace_Close.jpg?v=5",
+   "src": "still_05_Fireplace_Close.jpg?v=6",
+   "thumb": "thumb_05_Fireplace_Close.jpg?v=6",
    "w": 1920,
    "h": 1080,
    "version": "orig",
@@ -319,8 +339,8 @@
    "id": "day_06_WhiteConsole",
    "time": "day",
    "caption": "White Console",
-   "src": "still_06_WhiteConsole.jpg?v=5",
-   "thumb": "thumb_06_WhiteConsole.jpg?v=5",
+   "src": "still_06_WhiteConsole.jpg?v=6",
+   "thumb": "thumb_06_WhiteConsole.jpg?v=6",
    "w": 1920,
    "h": 1080,
    "version": "orig",
@@ -330,8 +350,8 @@
    "id": "day_11_ConsoleStools",
    "time": "day",
    "caption": "White Console & Stools",
-   "src": "still_11_ConsoleStools.jpg?v=5",
-   "thumb": "thumb_11_ConsoleStools.jpg?v=5",
+   "src": "still_11_ConsoleStools.jpg?v=6",
+   "thumb": "thumb_11_ConsoleStools.jpg?v=6",
    "w": 1920,
    "h": 1080,
    "version": "orig",
@@ -341,8 +361,8 @@
    "id": "day_07_OsloConsole",
    "time": "day",
    "caption": "Oslo Console",
-   "src": "still_07_OsloConsole.jpg?v=5",
-   "thumb": "thumb_07_OsloConsole.jpg?v=5",
+   "src": "still_07_OsloConsole.jpg?v=6",
+   "thumb": "thumb_07_OsloConsole.jpg?v=6",
    "w": 1920,
    "h": 1080,
    "version": "orig",
@@ -352,8 +372,8 @@
    "id": "day_08_Bar",
    "time": "day",
    "caption": "Bar",
-   "src": "still_08_Bar.jpg?v=5",
-   "thumb": "thumb_08_Bar.jpg?v=5",
+   "src": "still_08_Bar.jpg?v=6",
+   "thumb": "thumb_08_Bar.jpg?v=6",
    "w": 1920,
    "h": 1080,
    "version": "orig",
@@ -363,19 +383,30 @@
    "id": "day_08B_BarSink",
    "time": "day",
    "caption": "Bar Sink & Art",
-   "src": "still_08B_BarSink.jpg?v=5",
-   "thumb": "thumb_08B_BarSink.jpg?v=5",
+   "src": "still_08B_BarSink.jpg?v=6",
+   "thumb": "thumb_08B_BarSink.jpg?v=6",
    "w": 1920,
    "h": 1080,
    "version": "orig",
    "cam": "08B_BarSink"
   },
   {
+   "id": "day_08C_BarFull",
+   "time": "day",
+   "caption": "Full Bar View",
+   "src": "still_08C_BarFull.jpg?v=6",
+   "thumb": "thumb_08C_BarFull.jpg?v=6",
+   "w": 1920,
+   "h": 1080,
+   "version": "orig",
+   "cam": "08C_BarFull"
+  },
+  {
    "id": "day_09_BarCart",
    "time": "day",
    "caption": "Bar Cart",
-   "src": "still_09_BarCart.jpg?v=5",
-   "thumb": "thumb_09_BarCart.jpg?v=5",
+   "src": "still_09_BarCart.jpg?v=6",
+   "thumb": "thumb_09_BarCart.jpg?v=6",
    "w": 1920,
    "h": 1080,
    "version": "orig",
@@ -385,8 +416,8 @@
    "id": "day_10_Piano",
    "time": "day",
    "caption": "Piano Corner",
-   "src": "still_10_Piano.jpg?v=5",
-   "thumb": "thumb_10_Piano.jpg?v=5",
+   "src": "still_10_Piano.jpg?v=6",
+   "thumb": "thumb_10_Piano.jpg?v=6",
    "w": 1920,
    "h": 1080,
    "version": "orig",
