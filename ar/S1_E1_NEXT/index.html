@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Next Adventure - The Little Discoverers</title>
+<link rel="icon" href="data:,">
+<style>
+@font-face { font-family: "Kalam"; font-weight: 700; font-display: swap; src: url("../assets/Kalam-Bold-latin.woff2") format("woff2"); }
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; color: #18305f; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: radial-gradient(ellipse 70px 26px at 18% 60px, rgba(255,255,255,.85) 60%, transparent 100%), radial-gradient(ellipse 46px 22px at 28% 44px, rgba(255,255,255,.85) 60%, transparent 100%),
+  radial-gradient(ellipse 64px 24px at 84% 80px, rgba(255,255,255,.8) 60%, transparent 100%), linear-gradient(180deg, #8fd0ff 0%, #c4e8ff 45%, #e6f6ff 75%, #bfe8a6 100%) fixed; }
+main { max-width: 560px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+#logo { width: min(64vw, 300px); height: auto; }
+.card { width: 100%; background: rgba(255,255,255,.82); border: 3px solid #fff; border-radius: 22px; padding: 18px 16px; box-shadow: 0 3px 12px rgba(24,48,95,.15); }
+h1 { margin: 0; font-family: "Kalam", system-ui, sans-serif; font-size: clamp(30px, 8vw, 40px); line-height: 1.05; color: #dd2f2a; }
+h2 { margin: 0 0 6px; font-family: "Kalam", system-ui, sans-serif; font-size: 26px; line-height: 1.1; }
+.ep { margin: 4px 0 0; font-weight: 800; color: #dd2f2a; letter-spacing: .03em; }
+.title { margin: 4px 0 0; font-family: "Kalam", system-ui, sans-serif; font-size: clamp(24px, 6.4vw, 32px); line-height: 1.15; }
+#when { margin: 14px 0 0; font-size: 22px; font-weight: 800; color: #1b6fc7; }
+#when.soon { color: #f07a12; font-family: "Kalam", system-ui, sans-serif; font-size: 34px; }
+#count { margin: 2px 0 0; font-size: 16px; font-weight: 700; color: #24456f; }
+#note { margin: 6px 0 0; font-size: 16px; color: #24456f; }
+.gears { display: flex; justify-content: center; gap: 4px; margin-top: 8px; }
+.gears svg { animation: spin 6s linear infinite; }
+.gears svg:nth-child(2) { animation-direction: reverse; animation-duration: 4s; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .gears svg { animation: none; } }
+#stars { display: flex; justify-content: center; gap: 6px; margin: 8px 0 4px; }
+#stars button { width: 52px; height: 52px; padding: 0; border: 0; background: none; cursor: pointer; font-size: 46px; line-height: 1; color: #c9d6e6; transition: transform .12s; }
+#stars button.on { color: #ffc928; text-shadow: 0 0 0 #f29a0c, 0 2px 0 #f29a0c; }
+#stars button:active { transform: scale(1.2); }
+#avg { margin: 0; font-size: 15px; font-weight: 700; color: #24456f; min-height: 1.2em; }
+label { display: block; text-align: left; font-weight: 700; font-size: 15px; margin: 12px 0 4px; }
+textarea, input[type=text], input[type=password], input[type=date] { width: 100%; font: inherit; font-size: 17px; padding: 10px 12px; border: 2px solid #b8d2ee; border-radius: 14px; background: #fff; color: #18305f; }
+textarea { min-height: 110px; resize: vertical; }
+textarea:focus, input:focus { outline: none; border-color: #2f9bea; }
+.hint { margin: 6px 0 0; font-size: 13px; color: #4a6283; text-align: left; }
+button.big { margin-top: 14px; min-height: 56px; width: 100%; border: 0; border-radius: 28px; font: inherit; font-size: 20px; font-weight: 800; color: #fff; background: #c9321f; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.2); }
+button.big:disabled { opacity: .6; }
+#msg { margin: 10px 0 0; font-weight: 700; min-height: 1.2em; }
+#msg.ok { color: #3e8e2e; } #msg.bad { color: #c9321f; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+a.back { color: #1b6fc7; font-weight: 700; }
+#edit .row { display: flex; gap: 10px; align-items: center; text-align: left; margin-top: 10px; font-weight: 700; }
+#edit .row input { width: 24px; height: 24px; }
+#list { text-align: left; margin-top: 12px; font-size: 14px; }
+#list div { padding: 8px 0; border-top: 1px solid #d5e4f4; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <img id="logo" src="../assets/logo.png" alt="The Little Discoverers" width="600" height="280">
+
+  <section class="card" aria-labelledby="next-h">
+    <h1 id="next-h">Next Adventure!</h1>
+    <p class="ep" id="ep">Series 1 &middot; Episode 2</p>
+    <p class="title" id="eptitle">The Number Puzzle in Machine City</p>
+    <p id="when" class="soon">Coming soon!</p>
+    <p id="count" hidden></p>
+    <p id="note" hidden></p>
+    <div class="gears" aria-hidden="true">
+      <svg width="54" height="54" viewBox="0 0 54 54"><path id="g" fill="#ff9a1f" stroke="#18305f" stroke-width="2.4" stroke-linejoin="round" d=""/><circle cx="27" cy="27" r="7" fill="#18305f"/><circle cx="27" cy="27" r="3.6" fill="#e7edf5"/></svg>
+      <svg width="40" height="40" viewBox="0 0 54 54"><use href="#g" fill="#ffc928"/><circle cx="27" cy="27" r="7" fill="#18305f"/><circle cx="27" cy="27" r="3.6" fill="#e7edf5"/></svg>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="rate-h" id="rate">
+    <h2 id="rate-h">Did you like the story?</h2>
+    <div id="stars" role="radiogroup" aria-label="Your rating"></div>
+    <p id="avg"></p>
+    <form id="form" novalidate>
+      <label for="comment">Tell us what you liked, or what you'd like to see next</label>
+      <textarea id="comment" maxlength="1500" placeholder="I loved when..."></textarea>
+      <label for="name">Your first name (you can leave it empty)</label>
+      <input id="name" type="text" maxlength="40" autocomplete="off">
+      <div class="hp" aria-hidden="true"><label for="website">Leave empty</label><input id="website" type="text" tabindex="-1" autocomplete="off"></div>
+      <p class="hint">Kids: ask a grown-up to help you write. Please don't write your address or phone number.</p>
+      <button class="big" id="send" type="submit">Send</button>
+      <p id="msg" role="status"></p>
+    </form>
+  </section>
+
+  <section class="card" id="edit" hidden aria-labelledby="edit-h">
+    <h2 id="edit-h">Studio: release date</h2>
+    <label for="key">Studio key</label>
+    <input id="key" type="password" autocomplete="current-password">
+    <div class="row"><input id="nodate" type="checkbox"><label for="nodate" style="margin:0">No date yet: show "Coming soon!"</label></div>
+    <label for="date">Release date</label>
+    <input id="date" type="date">
+    <label for="enote">Short note under the date (optional)</label>
+    <input id="enote" type="text" maxlength="140" placeholder="On YouTube and in the app">
+    <button class="big" id="save" type="button" style="background:#1b6fc7">Save</button>
+    <p id="emsg" role="status"></p>
+    <button class="big" id="load" type="button" style="background:#3e8e2e">Show the latest comments</button>
+    <div id="list"></div>
+  </section>
+
+  <p><a class="back" href="../S1_E1_FILM/">Back to the story film</a></p>
+</main>
+<script>
+// Release date + ratings/comments for the next episode. Data: the ld-api Worker (ColorForestAR/ld_api). ?edit opens the studio panel.
+const params = new URLSearchParams(location.search);
+const API = params.get("api") || "https://ld-api.ms3dstudio-deploy-tools.workers.dev";
+const $ = (s) => document.querySelector(s);
+// one gear outline, drawn once
+(() => {
+  const R = 22, c = 27, pts = [];
+  for (let k = 0; k < 10; k++) for (const [fr, rad] of [[0, .78], [.12, 1], [.42, 1], [.54, .78]]) {
+    const a = 2 * Math.PI * (k + fr) / 10; pts.push(`${(c + R * rad * Math.cos(a)).toFixed(2)},${(c + R * rad * Math.sin(a)).toFixed(2)}`);
+  }
+  $("#g").setAttribute("d", "M" + pts.join("L") + "Z");
+})();
+
+const fmt = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+function showNext(d) {
+  const when = $("#when"), count = $("#count"), note = $("#note");
+  if (d.title) $("#eptitle").textContent = d.title;
+  if (d.episode) $("#ep").textContent = d.episode;
+  if (d.date) {
+    when.classList.remove("soon");
+    when.textContent = `Coming on ${fmt(d.date)}`;
+    const days = Math.ceil((new Date(d.date + "T00:00:00") - new Date()) / 864e5);
+    count.textContent = days > 1 ? `Only ${days} days to go!` : days === 1 ? "Tomorrow!" : days === 0 ? "It's out today!" : "It's out now!";
+    count.hidden = false;
+  } else {
+    when.classList.add("soon");
+    when.textContent = "Coming soon!";
+    count.hidden = true;
+  }
+  note.textContent = d.note || "";
+  note.hidden = !d.note;
+  $("#nodate").checked = !d.date;
+  $("#date").value = d.date || "";
+  $("#date").disabled = !d.date;
+  $("#enote").value = d.note || "";
+}
+fetch(`${API}/next`).then((r) => r.json()).then(showNext).catch(() => {});
+
+function showAvg(s) {
+  $("#avg").textContent = s && s.count ? `★ ${s.avg.toFixed(1)} from ${s.count} ${s.count === 1 ? "rating" : "ratings"}` : "";
+}
+fetch(`${API}/stats`).then((r) => r.json()).then(showAvg).catch(() => {});
+
+let rating = 0;
+const starBox = $("#stars");
+for (let i = 1; i <= 5; i++) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.textContent = "★";
+  b.setAttribute("role", "radio");
+  b.setAttribute("aria-label", `${i} ${i === 1 ? "star" : "stars"}`);
+  b.onclick = () => { rating = i; paint(); };
+  starBox.appendChild(b);
+}
+function paint() {
+  [...starBox.children].forEach((b, k) => { b.classList.toggle("on", k < rating); b.setAttribute("aria-checked", String(k + 1 === rating)); });
+}
+
+$("#form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = $("#msg");
+  const comment = $("#comment").value.trim();
+  if (!rating && !comment) { msg.className = "bad"; msg.textContent = "Tap the stars or write a few words first."; return; }
+  $("#send").disabled = true;
+  msg.className = ""; msg.textContent = "Sending...";
+  try {
+    const r = await fetch(`${API}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating, comment, name: $("#name").value.trim(), page: params.get("from") || "next", website: $("#website").value }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Something went wrong");
+    msg.className = "ok"; msg.textContent = "Thank you! Kimo, Farida and Shiko got your message.";
+    $("#comment").value = ""; rating = 0; paint();
+    fetch(`${API}/stats`).then((r) => r.json()).then(showAvg).catch(() => {});
+  } catch (err) {
+    msg.className = "bad"; msg.textContent = err.message === "Failed to fetch" ? "No internet? Please try again." : err.message;
+  }
+  $("#send").disabled = false;
+});
+
+// studio panel
+if (params.has("edit")) {
+  $("#edit").hidden = false;
+  try { $("#key").value = localStorage.getItem("ld_studio_key") || ""; } catch (e) {}
+  $("#nodate").onchange = () => { $("#date").disabled = $("#nodate").checked; };
+  $("#save").onclick = async () => {
+    const em = $("#emsg");
+    const key = $("#key").value.trim();
+    const date = $("#nodate").checked ? "" : $("#date").value;
+    if (!$("#nodate").checked && !date) { em.className = "bad"; em.textContent = "Pick a date, or tick \"No date yet\"."; return; }
+    em.className = ""; em.textContent = "Saving...";
+    try {
+      const r = await fetch(`${API}/next`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key, date, note: $("#enote").value.trim() }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Not saved");
+      try { localStorage.setItem("ld_studio_key", key); } catch (e) {}
+      showNext(d);
+      em.className = "ok"; em.textContent = "Saved. Everyone sees it now.";
+    } catch (err) { em.className = "bad"; em.textContent = err.message; }
+  };
+  $("#load").onclick = async () => {
+    const box = $("#list");
+    box.textContent = "Loading...";
+    try {
+      const r = await fetch(`${API}/feedback?key=${encodeURIComponent($("#key").value.trim())}`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Could not load");
+      box.replaceChildren(...d.items.map((it) => {
+        const div = document.createElement("div");
+        const stars = it.rating ? "★".repeat(it.rating) + "☆".repeat(5 - it.rating) : "no stars";
+        div.textContent = `${new Date(it.at).toLocaleString("en-GB")} · ${stars} · ${it.name || "someone"} (${it.country || "?"}): ${it.comment || "-"}${it.mailed ? "" : "  [not e-mailed]"}`;
+        return div;
+      }));
+      if (!d.items.length) box.textContent = "No comments yet.";
+    } catch (err) { box.textContent = err.message; }
+  };
+}
+</script>
+</body>
+</html>
