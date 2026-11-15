@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>The Story Film - The Little Discoverers</title>
+<link rel="icon" href="data:,">
+<style>
+@font-face { font-family: "Kalam"; font-weight: 700; font-display: swap; src: url("../assets/Kalam-Bold-latin.woff2") format("woff2"); }
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; color: #18305f; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: radial-gradient(ellipse 70px 26px at 18% 60px, rgba(255,255,255,.85) 60%, transparent 100%), radial-gradient(ellipse 46px 22px at 28% 44px, rgba(255,255,255,.85) 60%, transparent 100%),
+  radial-gradient(ellipse 64px 24px at 84% 80px, rgba(255,255,255,.8) 60%, transparent 100%), linear-gradient(180deg, #8fd0ff 0%, #c4e8ff 45%, #e6f6ff 75%, #bfe8a6 100%) fixed; }
+main { max-width: 760px; margin: 0 auto; padding: calc(18px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+#logo { width: min(70vw, 340px); height: auto; }
+h1 { margin: 0; font-family: "Kalam", system-ui, sans-serif; font-size: clamp(24px, 6vw, 34px); line-height: 1.15; }
+#status { margin: 0; font-size: 17px; font-weight: 700; color: #24456f; max-width: 30em; }
+#grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; width: 100%; }
+@media (max-width: 520px) { #grid { grid-template-columns: repeat(2, 1fr); } }
+.tile { position: relative; display: block; border-radius: 12px; overflow: hidden; border: 3px solid #fff; background: #fff; box-shadow: 0 2px 8px rgba(24,48,95,.18); text-decoration: none; color: inherit; }
+.tile img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.tile span { position: absolute; left: 6px; top: 6px; min-width: 26px; height: 26px; padding: 0 6px; display: flex; align-items: center; justify-content: center; border-radius: 13px; font-weight: 800; font-size: 14px; color: #18305f; background: rgba(255,255,255,.9); }
+.tile.done { border-color: #f29a0c; }
+.tile.done span { color: #fff; background: #f29a0c; }
+.tile.done::after { content: "\2713"; position: absolute; right: 6px; bottom: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 900; color: #fff; background: #3e8e2e; border: 2px solid #fff; }
+.tile:not(.done) img { opacity: .8; }
+button { font: inherit; font-weight: 800; border: 0; border-radius: 30px; cursor: pointer; min-height: 60px; padding: 0 34px; font-size: 21px; color: #fff; background: #c9321f; box-shadow: 0 3px 10px rgba(0,0,0,.25); }
+#play { background: #1b6fc7; animation: ask 1.6s ease-in-out infinite; }
+@keyframes ask { 50% { transform: scale(1.06); } }
+#player { width: 100%; border-radius: 14px; overflow: hidden; background: #000; box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+#player video { display: block; width: 100%; height: auto; }
+.small { margin: 0; font-size: 14px; color: #24456f; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <img id="logo" src="../assets/logo.png" alt="The Little Discoverers" width="600" height="280">
+  <h1>The Story Film</h1>
+  <p class="small" style="font-size:16px;font-weight:700">Series 1 &middot; Episode 1: The Secret of the Lost Colors Tree</p>
+  <p id="status"></p>
+  <button id="play" hidden>Play the story film</button>
+  <div id="player" hidden><video id="film" controls playsinline preload="none" poster="../assets/film_poster.jpg"><source src="../assets/S1_E1_film.mp4" type="video/mp4"></video></div>
+  <div id="grid"></div>
+  <p class="small">Tap a page to open its magic. Every page you finish coloring gets a star on this phone.</p>
+</main>
+<script>
+// Same memory as the AR pages (app.js): finished pages are kept on this phone. ?nocheck=1 opens the film for the studio.
+const NAMES = ["The Gate to the Color Forest", "The Three Apples and the Magic Bridge", "The River Comes Back to Life", "A Sun That Brings Back the Warmth",
+  "The Three Primary Colors", "Ginger and the Map", "The Secret of Green", "Momo Needs a Friend", "The Color Tree Awakens", "The Forest Celebration"];
+let done = new Set();
+try { done = new Set(JSON.parse(localStorage.getItem("ld_s1e1_done") || "[]")); } catch (e) {}
+const open = done.size >= 10 || new URLSearchParams(location.search).has("nocheck");
+const grid = document.getElementById("grid");
+NAMES.forEach((name, i) => {
+  const p = String(i + 1).padStart(2, "0");
+  const a = document.createElement("a");
+  a.className = "tile" + (done.has(p) ? " done" : "");
+  a.href = `../S1_E1_P${p}/`;
+  a.title = `Page ${i + 1}: ${name}`;
+  a.innerHTML = `<img src="../assets/P${p}_thumb${done.has(p) ? "" : "_grey"}.jpg" alt="Page ${i + 1}: ${name}" loading="lazy"><span>${i + 1}</span>`;
+  grid.appendChild(a);
+});
+const left = NAMES.map((_, i) => String(i + 1).padStart(2, "0")).filter((p) => !done.has(p)).map(Number);
+document.getElementById("status").textContent = open
+  ? "You colored all 10 pages! The colors are back, and the story film is yours."
+  : `${done.size} of 10 pages colored. Color and scan ${left.length === 1 ? "page" : "pages"} ${left.join(", ")} to open the story film!`;
+const play = document.getElementById("play"), player = document.getElementById("player"), film = document.getElementById("film");
+play.hidden = !open;
+play.onclick = () => {
+  play.hidden = true;
+  player.hidden = false;
+  film.play().catch(() => {});
+  if (film.requestFullscreen) film.requestFullscreen().catch(() => {});
+};
+</script>
+</body>
+</html>

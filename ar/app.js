@@ -41,6 +41,34 @@ const $ = (s) => document.querySelector(s);
 const state = { phase: "search", found: 0, lost: 0, visible: false, ended: false, audioOk: false, time: 0, duration: 0, error: null, lines: [], score: null, measures: 0 };
 window.__ar = state;
 
+// Pages the child has finished colouring are remembered on this phone; all 10 open the story film (S1_E1_FILM/).
+const DONE_KEY = "ld_s1e1_done";
+function doneSet() {
+  try { return new Set(JSON.parse(localStorage.getItem(DONE_KEY) || "[]")); } catch (e) { return new Set(); }
+}
+function markDone(p) {
+  try {
+    const s = doneSet();
+    s.add(p);
+    localStorage.setItem(DONE_KEY, JSON.stringify([...s].sort()));
+  } catch (e) { /* private mode: nothing kept */ }
+  showStars();
+}
+function showStars() {
+  const box = $("#stars");
+  if (!box) return;
+  const done = doneSet();
+  box.replaceChildren(...Object.keys(PAGES).sort().map((p) => {   // "10" is an integer key and would come first
+    const s = document.createElement("span");
+    s.className = done.has(p) ? "star done" : p === id ? "star here" : "star";
+    s.textContent = Number(p);
+    s.title = `Page ${Number(p)}`;
+    return s;
+  }));
+  const t = $("#stars-text");
+  if (t) t.textContent = done.size >= 10 ? "All 10 pages colored! The story film is open." : `${done.size} of 10 pages colored. Color all 10 to open the story film!`;
+}
+
 function fail(text) {
   state.error = text;
   $("#start-panel").hidden = false;
@@ -119,6 +147,7 @@ async function main() {
   if (!id || !PAGES[id]) return fail("This page of the book was not found. Please scan the code on the page again.");
   document.title = `${PAGES[id]} - The Little Discoverers`;
   $("#page-name").textContent = `Page ${Number(id)}: ${PAGES[id]}`;
+  showStars();
 
   const audio = new Audio(`${base}P${id}.mp3`);
   audio.preload = "auto";
@@ -245,7 +274,18 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check, captions)
   fit();
   window.addEventListener("resize", fit);
 
-  const showPlay = (on) => { $("#replay").hidden = !on; $("#controls").hidden = !on; };
+  const showPlay = (on) => {
+    $("#replay").hidden = !on;
+    $("#controls").hidden = !on;
+    const all = doneSet().size >= 10;
+    $("#film").hidden = !on || !all;
+    const left = $("#left-text");
+    if (left) {
+      const n = doneSet().size;
+      left.hidden = !on || all || NOCHECK;
+      left.textContent = `${n} of 10 pages colored. Color all 10 to open the story film!`;
+    }
+  };
   // the small speaker in the corner: sound is on unless the child turns it off, or the browser refused it (then it pulses until tapped)
   const showSound = () => {
     const b = $("#sound"), off = audio.muted || state.soundBlocked;
@@ -323,6 +363,7 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check, captions)
     if (r.pass) { passes++; fails = 0; } else { fails++; passes = 0; }
     if (passes >= 2) {
       state.phase = "yay";
+      markDone(id);
       if (glow) glow.visible = false;
       voice.pause();
       say("yay");
@@ -343,7 +384,10 @@ async function startAR(audio, voice, holder, mixer, clip, kimo, check, captions)
     clearTimeout(lostTimer);
     if (state.phase === "search") {
       passes = 0; fails = 0;
-      if (check) { state.phase = "check"; hint("Let me see your colors..."); } else state.phase = "story";
+      if (check) { state.phase = "check"; hint("Let me see your colors..."); } else {
+        state.phase = "story";
+        if (!NOCHECK) markDone(id);   // the colour check could not load: the child is never locked out of the film for that
+      }
     }
     if (state.phase === "story") { hint(""); playSound(); }
     if (state.phase === "guide" && lastResult) hint("");
